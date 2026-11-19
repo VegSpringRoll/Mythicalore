@@ -9,7 +9,10 @@
     }
   ],
   "functions": {
-    "api/index.js": {
+    "api/*.js": {
+      "maxDuration": 60
+    },
+    "api/**/*.js": {
       "maxDuration": 60
     }
   }

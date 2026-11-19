@@ -181,4 +181,22 @@ assert(matches.some(m => m.name === 'Sanctuary Seals'));
 assert(matches.some(m => m.name === 'Global Rule'));
 console.log('   ✓ Lorebook matching logic verified.');
 
+// 10. Test Vercel Serverless API Dispatcher
+console.log('10. Testing Vercel Serverless Function Dispatcher...');
+const { default: apiIndexHandler } = await import('../api/index.js');
+assert.strictEqual(typeof apiIndexHandler, 'function');
+
+// Mock request / response for health check
+let resStatus = 0;
+let resData: any = null;
+const mockRes: any = {
+  setHeader: () => {},
+  status: (code: number) => { resStatus = code; return mockRes; },
+  json: (data: any) => { resData = data; return mockRes; },
+};
+await apiIndexHandler({ url: '/api/health', method: 'GET' } as any, mockRes);
+assert.strictEqual(resStatus, 200);
+assert.strictEqual(resData?.status, 'ok');
+console.log('    ✓ Vercel Serverless API Dispatcher verified.');
+
 console.log('All Roleplay Engine verification checks PASSED successfully!');

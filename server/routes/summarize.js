@@ -1,13 +1,37 @@
 import { buildProviderRequest } from '../providers/sanitizer.js';
 
 export async function handleSummarize(req, res) {
-  try {
-    const provider = req.headers['x-provider'] || req.body.provider || 'groq';
-    const apiKey = req.headers['x-api-key'] || req.body.apiKey;
-    const baseUrl = req.headers['x-base-url'] || req.body.baseUrl;
-    const model = req.body.model || 'llama-3.3-70b-versatile';
+  // Ensure CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, x-provider, x-base-url');
 
-    const { existingSummary, turnsToSummarize, characterName, personaName } = req.body;
+  if (req.method === 'OPTIONS') {
+    return res.status ? res.status(200).end() : res.writeHead(200).end();
+  }
+
+  if (!res.status) {
+    res.status = function (code) {
+      res.statusCode = code;
+      return res;
+    };
+  }
+  if (!res.json) {
+    res.json = function (data) {
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(data));
+      return res;
+    };
+  }
+
+  try {
+    const body = req.body || {};
+    const provider = req.headers['x-provider'] || body.provider || 'groq';
+    const apiKey = req.headers['x-api-key'] || body.apiKey;
+    const baseUrl = req.headers['x-base-url'] || body.baseUrl;
+    const model = body.model || 'llama-3.3-70b-versatile';
+
+    const { existingSummary, turnsToSummarize, characterName, personaName } = body;
 
     const systemPrompt = `You are a meticulous narrative archivist and summarizer for an ongoing roleplay chronicle.
 Your mission is to digest recent roleplay turns between ${characterName} and ${personaName} into a cohesive, atmospheric summary.

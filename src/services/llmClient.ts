@@ -59,9 +59,17 @@ export async function fetchProviderModels(
       if (Array.isArray(data.models) && data.models.length > 0) {
         return data.models;
       }
+    } else {
+      const errJson = await res.json().catch(() => null);
+      if (errJson?.error) {
+        throw new Error(errJson.error);
+      }
     }
-  } catch {
-    console.warn('[fetchProviderModels] Proxy offline, falling back to direct browser fetch.');
+  } catch (err: any) {
+    if (err && err.message && !err.message.includes('fetch')) {
+      throw err;
+    }
+    console.warn('[fetchProviderModels] Proxy offline or error, falling back to direct browser fetch.', err);
   }
 
   // 2. Direct browser fetch fallback
@@ -149,6 +157,11 @@ export async function testConnection(
     if (res.ok) {
       const data = await res.json();
       return data;
+    } else {
+      const errJson = await res.json().catch(() => null);
+      if (errJson?.error) {
+        return { success: false, latencyMs: Date.now() - start, error: errJson.error };
+      }
     }
   } catch {
     console.warn('[testConnection] Proxy offline, testing direct connection from browser.');
@@ -418,6 +431,16 @@ export async function streamChatCompletion(
         callbacks.onDone();
       }
       return;
+    } else if (!res.ok) {
+      let errorText = '';
+      try {
+        const errJson = await res.json();
+        errorText = errJson.error || JSON.stringify(errJson);
+      } catch {
+        errorText = await res.text().catch(() => '');
+      }
+      callbacks.onError(`Proxy Error: ${errorText || `HTTP ${res.status}`}`);
+      return;
     }
   } catch (err) {
     if (signal?.aborted) {
@@ -464,9 +487,15 @@ export async function requestBackgroundSummary(params: {
     if (res.ok) {
       const json = await res.json();
       return json.summary || '';
+    } else {
+      const errJson = await res.json().catch(() => null);
+      if (errJson?.error) {
+        throw new Error(errJson.error);
+      }
     }
-  } catch {
-    console.warn('[requestBackgroundSummary] Proxy offline, skipping background summary.');
+  } catch (err: any) {
+    console.warn('[requestBackgroundSummary] Proxy error:', err);
+    throw err;
   }
   return '';
 }

@@ -21,20 +21,20 @@ app.use(cors({
 app.use(express.json({ limit: '20mb' }));
 
 // Health check
-app.get('/api/health', (_req, res) => {
+app.get(['/api/health', '/health'], (_req, res) => {
   res.json({
     status: 'ok',
-    service: 'Aetheria Roleplay Engine Stateless Proxy (JavaScript ESM)',
+    service: 'Mythicalore Roleplay Engine Stateless Proxy (JavaScript ESM)',
     timestamp: Date.now(),
   });
 });
 
-app.get('/api/models', handleFetchModels);
-app.post('/api/models', handleFetchModels);
-app.post('/api/chat/stream', handleChatStream);
-app.post('/api/test-connection', handleTestConnection);
-app.post('/api/summarize', handleSummarize);
-app.post('/api/world-state/update', handleUpdateWorldState);
+app.get(['/api/models', '/models'], handleFetchModels);
+app.post(['/api/models', '/models'], handleFetchModels);
+app.post(['/api/chat/stream', '/chat/stream'], handleChatStream);
+app.post(['/api/test-connection', '/test-connection'], handleTestConnection);
+app.post(['/api/summarize', '/summarize'], handleSummarize);
+app.post(['/api/world-state/update', '/world-state/update'], handleUpdateWorldState);
 
 if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   const server = app.listen(Number(PORT), '0.0.0.0', () => {
