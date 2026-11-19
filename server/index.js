@@ -1,0 +1,52 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { handleChatStream } from './routes/chatStream.js';
+import { handleTestConnection } from './routes/testConnection.js';
+import { handleSummarize } from './routes/summarize.js';
+import { handleFetchModels } from './routes/models.js';
+import { handleUpdateWorldState } from './routes/worldState.js';
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+app.use(cors({
+  origin: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-provider', 'x-base-url'],
+}));
+
+app.use(express.json({ limit: '20mb' }));
+
+// Health check
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'Aetheria Roleplay Engine Stateless Proxy (JavaScript ESM)',
+    timestamp: Date.now(),
+  });
+});
+
+app.get('/api/models', handleFetchModels);
+app.post('/api/models', handleFetchModels);
+app.post('/api/chat/stream', handleChatStream);
+app.post('/api/test-connection', handleTestConnection);
+app.post('/api/summarize', handleSummarize);
+app.post('/api/world-state/update', handleUpdateWorldState);
+
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+  const server = app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`[Proxy Backend] Stateless BYOK Engine running on http://localhost:${PORT}`);
+  });
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`[Proxy Backend] Port ${PORT} already active, continuing.`);
+    } else {
+      console.error('[Proxy Backend] Server error:', err);
+    }
+  });
+}
+
+export default app;
