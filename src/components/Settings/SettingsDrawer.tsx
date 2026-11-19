@@ -124,7 +124,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             }`}
           >
             <Brain className="w-3.5 h-3.5 text-zinc-300" />
-            <span>Background Summarizer BYOK</span>
+            <span>Summary Model</span>
           </button>
 
           <button

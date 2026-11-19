@@ -31,7 +31,7 @@ export const PROVIDER_CAPABILITIES = {
   },
   gemini: {
     supportsMinP: false,
-    supportsTopK: true,
+    supportsTopK: false,
     supportsRepetitionPenalty: false,
     supportsFrequencyPenalty: false,
     supportsPresencePenalty: false,
@@ -228,6 +228,15 @@ export function buildProviderRequest(config) {
   }
   if (capabilities.supportsRepetitionPenalty && typeof samplers.repetition_penalty === 'number' && samplers.repetition_penalty !== 1.0) {
     body.repetition_penalty = samplers.repetition_penalty;
+  }
+
+  // Google Gemini strict parameter cleanup (Google rejects unknown fields like top_k with HTTP 400)
+  if (provider === 'gemini') {
+    delete body.top_k;
+    delete body.min_p;
+    delete body.frequency_penalty;
+    delete body.presence_penalty;
+    delete body.repetition_penalty;
   }
 
   return { url, headers, body, isAnthropic: false };

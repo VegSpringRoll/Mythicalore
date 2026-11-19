@@ -119,7 +119,7 @@ assert.strictEqual(geminiReq.headers['Authorization'], 'Bearer gemini-test-key')
 assert.strictEqual(geminiReq.body.frequency_penalty, undefined, 'Gemini must strip frequency_penalty');
 assert.strictEqual(geminiReq.body.presence_penalty, undefined, 'Gemini must strip presence_penalty');
 assert.strictEqual(geminiReq.body.min_p, undefined, 'Gemini must strip min_p');
-assert.strictEqual(geminiReq.body.top_k, 40, 'Gemini preserves top_k');
+assert.strictEqual(geminiReq.body.top_k, undefined, 'Gemini must strip top_k (avoids HTTP 400)');
 console.log('   ✓ Google Gemini URL normalization and parameter sanitization verified.');
 
 // 5. Test PNG Chunk Extraction & Encoding with zTXt and tEXt

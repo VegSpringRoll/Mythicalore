@@ -64,6 +64,29 @@ export const RoleplayProfiles: React.FC<RoleplayProfilesProps> = ({
   const [testResult, setTestResult] = useState<TestConnectionResult | null>(null);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
+  // Sliding window active turns state
+  const [slidingTurnsInput, setSlidingTurnsInput] = useState<string>(
+    String(settings.contextWindow?.slidingWindowTurns || 10)
+  );
+
+  React.useEffect(() => {
+    setSlidingTurnsInput(String(settings.contextWindow?.slidingWindowTurns || 10));
+  }, [settings.contextWindow?.slidingWindowTurns]);
+
+  const handleCommitSlidingTurns = async (numVal: number) => {
+    const val = Math.max(2, Math.min(50, numVal));
+    setSlidingTurnsInput(String(val));
+    const updatedSettings: AppSettingsRecord = {
+      ...settings,
+      contextWindow: {
+        ...settings.contextWindow,
+        slidingWindowTurns: val,
+      },
+    };
+    await saveAppSettings(updatedSettings);
+    onUpdateSettings(updatedSettings);
+  };
+
   const startEdit = (p: RoleplayProfile) => {
     setEditingId(p.id);
     setName(p.name);
@@ -585,7 +608,7 @@ export const RoleplayProfiles: React.FC<RoleplayProfilesProps> = ({
       </div>
 
       {/* --- SLIDING WINDOW ACTIVE TURNS (BYOK Context Window Setting) --- */}
-      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2 mt-4">
+      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 mt-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <label className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -593,32 +616,74 @@ export const RoleplayProfiles: React.FC<RoleplayProfilesProps> = ({
               <span>Sliding Window Active Turns</span>
             </label>
             <p className="text-[11px] text-zinc-400 mt-0.5">
-              Controls how many recent chat turns (user + assistant) are sent directly to the AI in the active prompt payload. Older turns are digested by the Summarizer.
+              Controls how many recent chat turns (user + assistant) are sent directly to the AI in the active prompt payload. Older turns are digested by the Summary Model.
             </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleCommitSlidingTurns((parseInt(slidingTurnsInput, 10) || 10) - 1)}
+              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold text-sm transition-colors"
+              title="Decrease turns"
+            >
+              -
+            </button>
             <input
-              type="number"
-              min={2}
-              max={50}
-              value={settings.contextWindow.slidingWindowTurns || 10}
-              onChange={async (e) => {
-                const val = Math.max(2, Math.min(50, parseInt(e.target.value, 10) || 10));
-                const updatedSettings: AppSettingsRecord = {
-                  ...settings,
-                  contextWindow: {
-                    ...settings.contextWindow,
-                    slidingWindowTurns: val,
-                  },
-                };
-                await saveAppSettings(updatedSettings);
-                onUpdateSettings(updatedSettings);
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={slidingTurnsInput}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSlidingTurnsInput(val);
+                const num = parseInt(val, 10);
+                if (!isNaN(num) && num >= 2 && num <= 50) {
+                  handleCommitSlidingTurns(num);
+                }
               }}
-              className="w-16 px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-center text-xs focus:outline-none focus:border-white"
+              onBlur={() => {
+                const num = parseInt(slidingTurnsInput, 10);
+                handleCommitSlidingTurns(isNaN(num) ? 10 : num);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const num = parseInt(slidingTurnsInput, 10);
+                  handleCommitSlidingTurns(isNaN(num) ? 10 : num);
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              className="w-14 px-2 py-1 rounded-xl bg-black/50 border border-white/20 text-white font-mono text-center text-xs focus:outline-none focus:border-white"
             />
+            <button
+              type="button"
+              onClick={() => handleCommitSlidingTurns((parseInt(slidingTurnsInput, 10) || 10) + 1)}
+              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold text-sm transition-colors"
+              title="Increase turns"
+            >
+              +
+            </button>
             <span className="text-xs font-medium text-zinc-300">turns</span>
           </div>
+        </div>
+
+        {/* Quick select preset pills */}
+        <div className="flex items-center gap-2 pt-1 flex-wrap">
+          <span className="text-[11px] text-zinc-400">Presets:</span>
+          {[5, 10, 15, 20, 30].map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => handleCommitSlidingTurns(preset)}
+              className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all ${
+                (settings.contextWindow?.slidingWindowTurns || 10) === preset
+                  ? 'bg-white text-black shadow-glow-white/20'
+                  : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10'
+              }`}
+            >
+              {preset}
+            </button>
+          ))}
         </div>
       </div>
     </div>

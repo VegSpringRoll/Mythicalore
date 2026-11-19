@@ -18,7 +18,6 @@ import {
   Search,
   Zap,
   Save,
-  BookOpen,
   Download,
   Upload
 } from 'lucide-react';
@@ -258,7 +257,7 @@ export const SummarizerProfiles: React.FC<SummarizerProfilesProps> = ({
       <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 flex items-start gap-3">
         <Brain className="w-5 h-5 text-white shrink-0 mt-0.5" />
         <div className="text-xs text-zinc-300 leading-relaxed">
-          <strong className="text-white">Independent Background Summarizer:</strong> Operates completely separately from your primary roleplay model with its own credentials (e.g. fast/cheap Groq or Gemini Flash). It digests chapters and context in the background without consuming your high-tier roleplay tokens!
+          <strong className="text-white">Independent Summary Model:</strong> Operates completely separately from your primary roleplay model with its own credentials (e.g. fast/cheap Groq or Gemini Flash). It digests chapters and context in the background without consuming your high-tier roleplay tokens!
         </div>
       </div>
 
@@ -267,10 +266,10 @@ export const SummarizerProfiles: React.FC<SummarizerProfilesProps> = ({
         <div>
           <h4 className="text-sm font-bold text-white flex items-center gap-2">
             <Brain className="w-4 h-4 text-white" />
-            <span>Summarizer BYOK & Models</span>
+            <span>Summary Model</span>
           </h4>
           <p className="text-xs text-zinc-400">
-            Auto-fetch models using your Summarizer key and save independent profiles.
+            Auto-fetch models using your key and save independent summary profiles.
           </p>
         </div>
 
@@ -281,7 +280,7 @@ export const SummarizerProfiles: React.FC<SummarizerProfilesProps> = ({
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-semibold shadow-glow-white/20 transition-all"
           >
             <Plus className="w-3.5 h-3.5 text-black" />
-            <span>New Summarizer Profile</span>
+            <span>New Summary Profile</span>
           </button>
         )}
       </div>
@@ -299,7 +298,7 @@ export const SummarizerProfiles: React.FC<SummarizerProfilesProps> = ({
           <div className="flex items-center justify-between pb-2 border-b border-white/10">
             <h5 className="text-xs font-bold text-white flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-zinc-300" />
-              <span>{editingId ? `Edit Summarizer: ${name}` : 'Configure Summarizer BYOK Profile'}</span>
+              <span>{editingId ? `Edit Summary Profile: ${name}` : 'Configure Summary Model Profile'}</span>
             </h5>
             {profiles.length > 0 && (
               <button
@@ -355,7 +354,7 @@ export const SummarizerProfiles: React.FC<SummarizerProfilesProps> = ({
             {/* API Key */}
             <div>
               <label className="block text-zinc-400 font-medium mb-1">
-                Summarizer API Key {provider === 'custom' && '(Optional for local)'}
+                Summary Model API Key {provider === 'custom' && '(Optional for local)'}
               </label>
               <div className="relative">
                 <input
@@ -393,7 +392,7 @@ export const SummarizerProfiles: React.FC<SummarizerProfilesProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <label className="text-xs font-bold text-white flex items-center gap-1.5">
                 <Brain className="w-3.5 h-3.5 text-zinc-300" />
-                <span>Summarizer Model Selector</span>
+                <span>Summary Model Selector</span>
               </label>
 
               <button
@@ -595,78 +594,18 @@ export const SummarizerProfiles: React.FC<SummarizerProfilesProps> = ({
           !isFormOpen && (
             <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center space-y-3">
               <p className="text-xs text-zinc-400">
-                No saved Summarizer BYOK profiles yet. Add your dedicated summarizer credentials above.
+                No saved Summary Model profiles yet. Add your dedicated summary credentials above.
               </p>
               <button
                 type="button"
                 onClick={startCreate}
                 className="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-semibold shadow-glow-white/20 transition-all"
               >
-                + Add Your First Summarizer BYOK
+                + Add Your First Summary Profile
               </button>
             </div>
           )
         )}
-      </div>
-
-      {/* --- CHAPTER TURN INTERVAL FOR SUMMARY --- */}
-      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 mt-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <label className="text-xs font-bold text-white flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-zinc-300" />
-              <span>Chapter Turn Interval for Summary</span>
-            </label>
-            <p className="text-[11px] text-zinc-400 mt-0.5">
-              Controls after how many turns the Summarizer digests past turns into a Chapter Summary (e.g. every 10 turns = Chapter 1, Chapter 2, etc.).
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <input
-              type="number"
-              min={3}
-              max={50}
-              value={settings.contextWindow.chapterTurnInterval || 10}
-              onChange={async (e) => {
-                const val = Math.max(3, Math.min(50, parseInt(e.target.value, 10) || 10));
-                const updatedSettings: AppSettingsRecord = {
-                  ...settings,
-                  contextWindow: {
-                    ...settings.contextWindow,
-                    chapterTurnInterval: val,
-                  },
-                };
-                await saveAppSettings(updatedSettings);
-                onUpdateSettings(updatedSettings);
-              }}
-              className="w-16 px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-center text-xs focus:outline-none focus:border-white"
-            />
-            <span className="text-xs font-medium text-zinc-300">turns</span>
-          </div>
-        </div>
-
-        <div className="pt-2 border-t border-white/[0.08]">
-          <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.contextWindow.autoTriggerSummary ?? true}
-              onChange={async (e) => {
-                const updatedSettings: AppSettingsRecord = {
-                  ...settings,
-                  contextWindow: {
-                    ...settings.contextWindow,
-                    autoTriggerSummary: e.target.checked,
-                  },
-                };
-                await saveAppSettings(updatedSettings);
-                onUpdateSettings(updatedSettings);
-              }}
-              className="w-4 h-4 rounded text-white focus:ring-white bg-black/50 border-white/20"
-            />
-            <span>Automatically trigger Chapter Summary in background when turn threshold is reached</span>
-          </label>
-        </div>
       </div>
 
       {/* --- WORKSPACE BACKUP & PORTABILITY --- */}
