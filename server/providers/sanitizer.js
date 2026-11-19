@@ -33,8 +33,8 @@ export const PROVIDER_CAPABILITIES = {
     supportsMinP: false,
     supportsTopK: true,
     supportsRepetitionPenalty: false,
-    supportsFrequencyPenalty: true,
-    supportsPresencePenalty: true,
+    supportsFrequencyPenalty: false,
+    supportsPresencePenalty: false,
     supportsSystemRoleInMessages: true,
     supportsStreaming: true,
     defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
@@ -163,12 +163,26 @@ export function buildProviderRequest(config) {
   }
 
   // 2. OPENAI-COMPATIBLE API (OpenRouter, OpenAI, Groq, Mistral, Gemini, Ollama)
+  let cleanBaseUrl = effectiveBaseUrl.replace(/\/+$/, '');
+  if (provider === 'gemini') {
+    if (!cleanBaseUrl.includes('/openai')) {
+      cleanBaseUrl = `${cleanBaseUrl}/openai`;
+    }
+  }
+
   let endpointPath = '/chat/completions';
-  if (effectiveBaseUrl.endsWith('/chat/completions')) {
+  if (cleanBaseUrl.endsWith('/chat/completions')) {
     endpointPath = '';
   }
 
-  const url = `${effectiveBaseUrl}${endpointPath}`;
+  let url = `${cleanBaseUrl}${endpointPath}`;
+
+  // For Gemini, pass key both as Bearer header and query param to guarantee acceptance by Google
+  if (provider === 'gemini' && apiKey) {
+    const sep = url.includes('?') ? '&' : '?';
+    url = `${url}${sep}key=${encodeURIComponent(apiKey)}`;
+  }
+
   const headers = {
     'Content-Type': 'application/json',
   };

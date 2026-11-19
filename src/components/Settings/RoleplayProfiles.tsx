@@ -29,7 +29,7 @@ const PROVIDER_OPTIONS: Array<{ id: ProviderId; label: string; defaultBaseUrl: s
   { id: 'openrouter', label: 'OpenRouter (Multi-Model / Recommended)', defaultBaseUrl: 'https://openrouter.ai/api/v1', placeholderModel: 'anthropic/claude-3.5-sonnet' },
   { id: 'anthropic', label: 'Anthropic (Claude Direct)', defaultBaseUrl: 'https://api.anthropic.com/v1', placeholderModel: 'claude-3-5-sonnet-20241022' },
   { id: 'openai', label: 'OpenAI Direct', defaultBaseUrl: 'https://api.openai.com/v1', placeholderModel: 'gpt-4o' },
-  { id: 'gemini', label: 'Google Gemini', defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', placeholderModel: 'gemini-1.5-flash' },
+  { id: 'gemini', label: 'Google Gemini', defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', placeholderModel: 'gemini-2.0-flash' },
   { id: 'groq', label: 'Groq (Ultra-Fast)', defaultBaseUrl: 'https://api.groq.com/openai/v1', placeholderModel: 'llama-3.3-70b-versatile' },
   { id: 'mistral', label: 'Mistral AI', defaultBaseUrl: 'https://api.mistral.ai/v1', placeholderModel: 'mistral-large-latest' },
   { id: 'custom', label: 'Local / Custom Endpoint (Ollama, llama.cpp, vLLM)', defaultBaseUrl: 'http://localhost:11434/v1', placeholderModel: 'llama3.2' },

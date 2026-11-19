@@ -9,7 +9,7 @@ export const SEED_SETTINGS: AppSettingsRecord = {
     openrouter: { apiKey: '', baseUrl: 'https://openrouter.ai/api/v1' },
     openai: { apiKey: '', baseUrl: 'https://api.openai.com/v1' },
     anthropic: { apiKey: '', baseUrl: 'https://api.anthropic.com/v1' },
-    gemini: { apiKey: '', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' },
+    gemini: { apiKey: '', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai' },
     groq: { apiKey: '', baseUrl: 'https://api.groq.com/openai/v1' },
     mistral: { apiKey: '', baseUrl: 'https://api.mistral.ai/v1' },
     custom: { apiKey: '', baseUrl: 'http://localhost:11434/v1' },

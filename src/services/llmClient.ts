@@ -106,10 +106,45 @@ export async function fetchProviderModels(
   }
 
   if (provider === 'gemini') {
+    if (apiKey) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.models) && data.models.length > 0) {
+            const list = data.models
+              .filter((m: any) => {
+                const id = (m.name || '').toLowerCase();
+                const methods = m.supportedGenerationMethods || [];
+                return (methods.includes('generateContent') || id.includes('gemini')) &&
+                  !id.includes('embedding') && !id.includes('aqa') && !id.includes('imagen');
+              })
+              .map((m: any) => {
+                const cleanId = (m.name || '').replace(/^models\//, '');
+                return {
+                  id: cleanId,
+                  name: m.displayName ? `${m.displayName} (${cleanId})` : cleanId,
+                  context_length: m.inputTokenLimit,
+                };
+              });
+            if (list.length > 0) {
+              list.sort((a: any, b: any) => b.id.localeCompare(a.id));
+              return list;
+            }
+          }
+        }
+      } catch {}
+    }
+
     return [
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Ultra Fast / Cheap)' },
-      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Deep 2M Context)' },
-      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Experimental)' },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Ultra Fast / Latest)' },
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Deep Reasoning / Latest)' },
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Next-Gen Production)' },
+      { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite (Super Low Latency)' },
+      { id: 'gemini-2.0-pro-exp-02-05', name: 'Gemini 2.0 Pro Experimental' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Fast / Low Cost)' },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (2M Context Window)' },
+      { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash-8B (High Throughput)' },
     ];
   }
 

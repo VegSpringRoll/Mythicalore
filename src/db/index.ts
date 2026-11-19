@@ -68,11 +68,21 @@ export async function initDatabase(): Promise<void> {
 
         if (
           cleanedRp.length !== (existingSettings.roleplayProfiles?.length || 0) ||
-          cleanedSum.length !== (existingSettings.summarizerProfiles?.length || 0)
+          cleanedSum.length !== (existingSettings.summarizerProfiles?.length || 0) ||
+          existingSettings.providers?.gemini?.baseUrl === 'https://generativelanguage.googleapis.com/v1beta'
         ) {
+          const updatedProviders = { ...existingSettings.providers };
+          if (updatedProviders.gemini?.baseUrl === 'https://generativelanguage.googleapis.com/v1beta') {
+            updatedProviders.gemini = {
+              ...updatedProviders.gemini,
+              baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+            };
+          }
+
           await db.settings.update('default', {
             roleplayProfiles: cleanedRp,
             summarizerProfiles: cleanedSum,
+            providers: updatedProviders,
           });
         }
       }

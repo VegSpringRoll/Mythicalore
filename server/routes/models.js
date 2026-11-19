@@ -155,11 +155,62 @@ export async function handleFetchModels(req, res) {
 
     // 7. GEMINI
     if (provider === 'gemini') {
+      // If API key is provided, query Google's Live Models API directly
+      if (apiKey) {
+        try {
+          const nativeUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`;
+          const upstream = await fetch(nativeUrl);
+          if (upstream.ok) {
+            const data = await upstream.json();
+            if (Array.isArray(data.models) && data.models.length > 0) {
+              const liveModels = data.models
+                .filter((m) => {
+                  const id = (m.name || '').toLowerCase();
+                  const methods = m.supportedGenerationMethods || [];
+                  const isGen = methods.includes('generateContent') || id.includes('gemini');
+                  const isExcluded = id.includes('embedding') || id.includes('aqa') || id.includes('imagen') || id.includes('bison') || id.includes('gecko');
+                  return isGen && !isExcluded;
+                })
+                .map((m) => {
+                  const cleanId = (m.name || '').replace(/^models\//, '');
+                  const friendly = m.displayName ? `${m.displayName} (${cleanId})` : cleanId;
+                  return {
+                    id: cleanId,
+                    name: friendly,
+                    context_length: m.inputTokenLimit,
+                  };
+                });
+
+              if (liveModels.length > 0) {
+                // Sort so newer versions (2.5, 2.0, 1.5) appear first
+                liveModels.sort((a, b) => b.id.localeCompare(a.id));
+                return res.json({ models: liveModels });
+              }
+            }
+          } else {
+            const errText = await upstream.text();
+            console.warn(`[Models] Google Gemini API error (${upstream.status}):`, errText.slice(0, 200));
+            // If the user entered an invalid key, report it back
+            if (upstream.status === 400 || upstream.status === 403) {
+              return res.status(upstream.status).json({ error: `Google Gemini returned ${upstream.status}: ${errText.slice(0, 200)}` });
+            }
+          }
+        } catch (e) {
+          console.warn('[Models] Failed to fetch live Google models, falling back to curated list:', e);
+        }
+      }
+
+      // Modern Gemini models catalog (2.5, 2.0, 1.5)
       return res.json({
         models: [
-          { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Ultra Fast / Cheap)' },
-          { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Deep 2M Context)' },
-          { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Experimental)' },
+          { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Ultra Fast / Latest)' },
+          { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Deep Reasoning / Latest)' },
+          { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Next-Gen Production)' },
+          { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite (Super Low Latency)' },
+          { id: 'gemini-2.0-pro-exp-02-05', name: 'Gemini 2.0 Pro Experimental' },
+          { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Fast / Low Cost)' },
+          { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (2M Context Window)' },
+          { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash-8B (High Throughput)' },
         ],
       });
     }

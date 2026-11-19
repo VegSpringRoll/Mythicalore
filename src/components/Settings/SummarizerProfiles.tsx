@@ -30,7 +30,7 @@ interface SummarizerProfilesProps {
 
 const PROVIDER_OPTIONS: Array<{ id: ProviderId; label: string; defaultBaseUrl: string; placeholderModel: string }> = [
   { id: 'groq', label: 'Groq (Ultra-Fast / Recommended)', defaultBaseUrl: 'https://api.groq.com/openai/v1', placeholderModel: 'llama-3.3-70b-versatile' },
-  { id: 'gemini', label: 'Google Gemini (Flash)', defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', placeholderModel: 'gemini-1.5-flash' },
+  { id: 'gemini', label: 'Google Gemini (Flash)', defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', placeholderModel: 'gemini-2.0-flash' },
   { id: 'openai', label: 'OpenAI (GPT-4o-mini)', defaultBaseUrl: 'https://api.openai.com/v1', placeholderModel: 'gpt-4o-mini' },
   { id: 'openrouter', label: 'OpenRouter', defaultBaseUrl: 'https://openrouter.ai/api/v1', placeholderModel: 'meta-llama/llama-3.3-70b-instruct' },
   { id: 'mistral', label: 'Mistral AI', defaultBaseUrl: 'https://api.mistral.ai/v1', placeholderModel: 'mistral-small-latest' },

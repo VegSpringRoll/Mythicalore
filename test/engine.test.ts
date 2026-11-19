@@ -98,6 +98,30 @@ assert.strictEqual(openRouterReq.body.repetition_penalty, 1.15);
 assert.strictEqual(openRouterReq.headers['Authorization'], 'Bearer or-key');
 console.log('   ✓ OpenRouter full samplers verified.');
 
+// Test Google Gemini parameter whitelist and URL normalization
+const geminiReq = buildProviderRequest({
+  provider: 'gemini',
+  model: 'gemini-2.0-flash',
+  baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+  messages: [{ role: 'user', content: 'Hello Gemini' }],
+  samplers: {
+    temperature: 0.7,
+    frequency_penalty: 0.5,
+    presence_penalty: 0.5,
+    min_p: 0.05,
+    top_k: 40,
+  },
+  apiKey: 'gemini-test-key',
+});
+assert(geminiReq.url.includes('/openai/chat/completions'), 'Gemini must normalize to /openai/chat/completions');
+assert(geminiReq.url.includes('key=gemini-test-key'), 'Gemini must include key in query');
+assert.strictEqual(geminiReq.headers['Authorization'], 'Bearer gemini-test-key');
+assert.strictEqual(geminiReq.body.frequency_penalty, undefined, 'Gemini must strip frequency_penalty');
+assert.strictEqual(geminiReq.body.presence_penalty, undefined, 'Gemini must strip presence_penalty');
+assert.strictEqual(geminiReq.body.min_p, undefined, 'Gemini must strip min_p');
+assert.strictEqual(geminiReq.body.top_k, 40, 'Gemini preserves top_k');
+console.log('   ✓ Google Gemini URL normalization and parameter sanitization verified.');
+
 // 5. Test PNG Chunk Extraction & Encoding with zTXt and tEXt
 console.log('5. Testing PNG Chunk Reading & Writing with pako...');
 const dummyPayload = JSON.stringify({
