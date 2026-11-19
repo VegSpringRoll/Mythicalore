@@ -1,4 +1,4 @@
-# 🎭 Aetheria — Universal Character Card Roleplay Engine
+# 🎭 Mythicalore — Universal Character Card Roleplay Engine
 
 A high-performance, universal, and card-driven roleplay engine built with **React (Vite), TypeScript, Tailwind CSS, Dexie (IndexedDB), and Node.js + Express**.
 
