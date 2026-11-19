@@ -62,4 +62,12 @@
   .prose-roleplay blockquote {
     @apply border-l-2 border-white/30 pl-3 italic text-zinc-400;
   }
+
+  /* Fullscreen Standalone Mobile Viewport Safe Insets */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

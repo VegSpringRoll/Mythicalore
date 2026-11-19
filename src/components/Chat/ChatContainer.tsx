@@ -14,7 +14,7 @@ import { streamChatCompletion, requestAiWorldStateUpdate } from '../../services/
 import { checkAndTriggerRollingSummary } from '../../services/summarizerWorker';
 import { substituteMacros } from '../../services/macroEngine';
 import { estimateTokens, estimateMessagesTokens } from '../../services/tokenEstimator';
-import { ChevronUp, AlertTriangle, AlertCircle } from 'lucide-react';
+import { ChevronUp, ChevronDown, AlertTriangle, AlertCircle } from 'lucide-react';
 
 interface ChatContainerProps {
   sessionId?: string | null;
@@ -45,8 +45,9 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [summarizerError, setSummarizerError] = useState<string | null>(null);
 
-  // Windowing & expander
-  const [showOlderTurns, setShowOlderTurns] = useState(false);
+  // Windowing: default to showing previous 10 messages of user
+  const [visibleTurnsCount, setVisibleTurnsCount] = useState<number>(10);
+  const isExpandingOlderRef = useRef(false);
 
   // Inspector modal
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
@@ -154,28 +155,30 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   }, [initSession]);
 
   useEffect(() => {
-    if (!showOlderTurns) {
+    if (!isExpandingOlderRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages.length, streamingContent, showOlderTurns]);
+    isExpandingOlderRef.current = false;
+  }, [messages.length, streamingContent]);
 
-  // Sliding window calculations
-  const slidingWindowSize = settings.contextWindow.slidingWindowTurns || 10;
+  // Windowing: render previous 10 messages of user + their assistant responses
+  const totalUserTurns = messages.filter((m) => m.role === 'user').length;
   let userTurnsSeen = 0;
   let sliceStartIndex = 0;
 
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].role === 'user') {
       userTurnsSeen++;
-      if (userTurnsSeen > slidingWindowSize) {
-        sliceStartIndex = i + 1;
+      if (userTurnsSeen === visibleTurnsCount) {
+        sliceStartIndex = i;
         break;
       }
     }
   }
 
-  const visibleMessages = showOlderTurns ? messages : messages.slice(sliceStartIndex);
-  const hiddenCount = showOlderTurns ? 0 : sliceStartIndex;
+  const hasHiddenPastMessages = sliceStartIndex > 0;
+  const hiddenCount = sliceStartIndex;
+  const visibleMessages = messages.slice(sliceStartIndex);
 
   const cumulativeTokens = estimateMessagesTokens(
     messages.map((m) => ({ role: m.role, content: m.content }))
@@ -503,27 +506,52 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono text-zinc-400">
-            Window: {messages.length - hiddenCount} turns active
+            Window: {visibleMessages.length} messages active ({totalUserTurns} user turns)
           </span>
         </div>
       </div>
 
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-2 space-y-4 max-w-5xl w-full mx-auto">
-        {/* Tier 1 Window Expander Button */}
-        {hiddenCount > 0 && (
-          <div className="flex justify-center my-2">
+        {/* Tier 1 Window Expander Button: Load earlier past messages */}
+        {hasHiddenPastMessages && (
+          <div className="flex items-center justify-center gap-2.5 py-3 animate-fadeIn">
             <button
               type="button"
-              onClick={() => setShowOlderTurns(!showOlderTurns)}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/10 text-xs font-medium transition-all shadow-sm"
+              onClick={() => {
+                isExpandingOlderRef.current = true;
+                setVisibleTurnsCount((prev) => prev + 10);
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 text-xs font-semibold text-zinc-200 hover:text-white transition-all shadow-md group active:scale-95"
             >
-              <ChevronUp className={`w-3.5 h-3.5 text-zinc-300 transition-transform ${showOlderTurns ? 'rotate-180' : ''}`} />
-              <span>
-                {showOlderTurns 
-                  ? 'Collapse to Active Sliding Window' 
-                  : `+ Show Older Turns (${hiddenCount} hidden)`}
-              </span>
+              <ChevronUp className="w-4 h-4 text-zinc-400 group-hover:text-white transition-transform group-hover:-translate-y-0.5" />
+              <span>+ Show Earlier Messages ({hiddenCount} older messages)</span>
+            </button>
+
+            {visibleTurnsCount > 10 && (
+              <button
+                type="button"
+                onClick={() => setVisibleTurnsCount(10)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+                title="Collapse back to previous 10 messages of user"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+                <span>Collapse to 10</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {!hasHiddenPastMessages && totalUserTurns > 10 && (
+          <div className="flex items-center justify-center gap-3 py-3 text-[11px] text-zinc-500 animate-fadeIn">
+            <span>Beginning of roleplay campaign</span>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => setVisibleTurnsCount(10)}
+              className="text-zinc-400 hover:text-white underline transition-colors"
+            >
+              Collapse back to previous 10 user messages
             </button>
           </div>
         )}

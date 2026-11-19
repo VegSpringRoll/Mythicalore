@@ -357,7 +357,7 @@ export default function App() {
       )}
 
       {/* --- MOBILE BOTTOM NAVIGATION BAR (sm:hidden) --- */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 h-14 bg-[#08080a]/90 backdrop-blur-2xl border-t border-white/10 z-40 flex items-center justify-around px-2 shadow-2xl">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 h-14 bg-[#08080a]/90 backdrop-blur-2xl border-t border-white/10 z-40 flex items-center justify-around px-2 safe-area-bottom shadow-2xl">
         <button
           type="button"
           onClick={() => setIsChatHistoryOpen(true)}
@@ -409,7 +409,7 @@ export default function App() {
       {/* --- MAIN APP COLUMN --- */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* TOP NAVIGATION BAR */}
-        <header className="px-3 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between gap-3 shrink-0 z-30">
+        <header className="px-3 sm:px-5 py-2.5 sm:py-3 safe-area-top flex items-center justify-between gap-3 shrink-0 z-30">
           {/* Brand on Left (Mythicalore + Pen Icon + Mobile Hamburger) */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             {/* Mobile Hamburger Trigger */}
