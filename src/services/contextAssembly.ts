@@ -75,17 +75,17 @@ ${persona.lorebookMoveset ? `Abilities/Gear: ${persona.lorebookMoveset}` : ''}`)
     systemSections.push(`[TIER 3: PINNED MEMORIES & MILESTONES (PERMANENT FACTS)]\n${pinnedText}`);
   }
 
-  // Tier 2: Chapter-based Chronicles
+  // Tier 2: Story Chronicles & Chapter Summaries (Compiled Historical Memory)
   if (session.chapters && session.chapters.length > 0) {
     const chaptersText = session.chapters
-      .map((ch) => `[CHRONICLE - CHAPTER ${ch.chapterNumber}: ${ch.title} (Turns ${ch.startTurn}-${ch.endTurn})]\n${ch.summary}`)
+      .map((ch) => `[CHAPTER ${ch.chapterNumber}: ${ch.title} (Turns ${ch.startTurn}–${ch.endTurn})]\n${ch.summary}`)
       .join('\n\n');
-    systemSections.push(`[TIER 2: CHRONICLE OF COMPLETED CHAPTERS]\n${chaptersText}`);
-  }
+    systemSections.push(`[STORY CHRONICLES & CHAPTER MEMORY (CANONICAL HISTORY)]
+The following completed chapters record canonical events that transpired in earlier turns of this story. Maintain absolute narrative continuity with them:
 
-  // Tier 2: Rolling Historical Summary (additional ongoing summary)
-  if (session.rollingSummary && session.rollingSummary.trim().length > 0) {
-    systemSections.push(`[TIER 2: ONGOING SUMMARY]\n${session.rollingSummary.trim()}`);
+${chaptersText}`);
+  } else if (session.rollingSummary && session.rollingSummary.trim().length > 0) {
+    systemSections.push(`[STORY CHRONICLES & NARRATIVE MEMORY (CANONICAL HISTORY)]\n${session.rollingSummary.trim()}`);
   }
 
   // Tier 3: Triggered Lorebook Entries

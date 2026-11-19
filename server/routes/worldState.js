@@ -1,5 +1,27 @@
 import { buildProviderRequest } from '../providers/sanitizer.js';
 
+async function parseBody(req) {
+  if (req.body && typeof req.body === 'object') return req.body;
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  if (req.readable) {
+    try {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const raw = Buffer.concat(chunks).toString('utf-8');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export async function handleUpdateWorldState(req, res) {
   // Ensure CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -25,7 +47,7 @@ export async function handleUpdateWorldState(req, res) {
   }
 
   try {
-    const body = req.body || {};
+    const body = await parseBody(req);
     const provider = req.headers['x-provider'] || body.provider || 'openrouter';
     const apiKey = req.headers['x-api-key'] || body.apiKey;
     const baseUrl = req.headers['x-base-url'] || body.baseUrl;

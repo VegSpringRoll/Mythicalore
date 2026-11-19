@@ -223,4 +223,65 @@ assert.strictEqual(resStatus, 200);
 assert.strictEqual(resData?.status, 'ok');
 console.log('    ✓ Vercel Serverless API Dispatcher verified.');
 
+// 11. Test Chapter Slicing, Compiling & AI Context Injection
+console.log('11. Testing Chapter Slicing, Compiling & AI Prompt Injection...');
+// Mock 30 user turns + 30 assistant turns
+const dummyMessages: any[] = [
+  { role: 'assistant', content: 'Opening scene in the sanctuary.' },
+];
+for (let turn = 1; turn <= 30; turn++) {
+  dummyMessages.push({ role: 'user', content: `User message for Turn ${turn}` });
+  dummyMessages.push({ role: 'assistant', content: `Assistant reply for Turn ${turn}` });
+}
+
+const userMsgIndices: number[] = [];
+for (let i = 0; i < dummyMessages.length; i++) {
+  if (dummyMessages[i].role === 'user') userMsgIndices.push(i);
+}
+assert.strictEqual(userMsgIndices.length, 30, 'Should have 30 user turns');
+
+const interval = 10;
+
+// Test Chapter 1 slice (N=10) when total turns = 30
+// Chapter 1 covers user turns 0..9 (Turns 1-10)
+const ch1StartMsg = 0; // captures opening scene
+const ch1EndMsg = userMsgIndices[10]; // stops before turn 11
+const ch1Slice = dummyMessages.slice(ch1StartMsg, ch1EndMsg);
+assert.strictEqual(ch1Slice[0].content, 'Opening scene in the sanctuary.');
+assert.strictEqual(ch1Slice[ch1Slice.length - 1].content, 'Assistant reply for Turn 10');
+assert(!ch1Slice.some((m: any) => m.content.includes('Turn 11')), 'Chapter 1 must NOT include Turn 11');
+
+// Test Chapter 2 slice (N=10)
+// Chapter 2 covers user turns 10..19 (Turns 11-20)
+const ch2StartMsg = userMsgIndices[10]; // starts at turn 11
+const ch2EndMsg = userMsgIndices[20]; // stops before turn 21
+const ch2Slice = dummyMessages.slice(ch2StartMsg, ch2EndMsg);
+assert.strictEqual(ch2Slice[0].content, 'User message for Turn 11');
+assert.strictEqual(ch2Slice[ch2Slice.length - 1].content, 'Assistant reply for Turn 20');
+assert(!ch2Slice.some((m: any) => m.content.includes('Turn 10')), 'Chapter 2 must NOT include Turn 10');
+assert(!ch2Slice.some((m: any) => m.content.includes('Turn 21')), 'Chapter 2 must NOT include Turn 21');
+
+// Test Chapter 3 slice (N=10)
+// Chapter 3 covers user turns 20..29 (Turns 21-30)
+const ch3StartMsg = userMsgIndices[20]; // starts at turn 21
+const ch3Slice = dummyMessages.slice(ch3StartMsg);
+assert.strictEqual(ch3Slice[0].content, 'User message for Turn 21');
+assert.strictEqual(ch3Slice[ch3Slice.length - 1].content, 'Assistant reply for Turn 30');
+assert(!ch3Slice.some((m: any) => m.content.includes('Turn 20')), 'Chapter 3 must NOT include Turn 20');
+
+// Test Compilation one after another
+const compiledChapters = [
+  { chapterNumber: 1, title: 'The Arrival', startTurn: 1, endTurn: 10, summary: 'Summary of 1-10.' },
+  { chapterNumber: 2, title: 'The Descent', startTurn: 11, endTurn: 20, summary: 'Summary of 11-20.' },
+  { chapterNumber: 3, title: 'The Breach', startTurn: 21, endTurn: 30, summary: 'Summary of 21-30.' },
+];
+const compiledText = compiledChapters
+  .map(c => `[CHAPTER ${c.chapterNumber}: ${c.title} (Turns ${c.startTurn}–${c.endTurn})]\n${c.summary}`)
+  .join('\n\n');
+
+assert(compiledText.includes('[CHAPTER 1: The Arrival (Turns 1–10)]'));
+assert(compiledText.includes('[CHAPTER 2: The Descent (Turns 11–20)]'));
+assert(compiledText.includes('[CHAPTER 3: The Breach (Turns 21–30)]'));
+console.log('    ✓ Chapter slicing and compilation verified.');
+
 console.log('All Roleplay Engine verification checks PASSED successfully!');

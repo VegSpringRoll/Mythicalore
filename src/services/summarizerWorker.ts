@@ -9,8 +9,8 @@ let isSummarizing = false;
 
 /**
  * Generates a structured Chapter summary for the session.
- * For example: Turns 1-10 -> Chapter 1, Turns 11-20 -> Chapter 2, etc.
- * Can be triggered automatically or manually from the World State & Chronicle panel.
+ * Each chapter covers ONLY its own slice of N turns (e.g. Turns 1-10 -> Chapter 1, Turns 11-20 -> Chapter 2).
+ * Completed chapters are compiled one after another.
  */
 export async function generateChapterSummary(params: {
   session: ChatSessionRecord;
@@ -24,37 +24,53 @@ export async function generateChapterSummary(params: {
 
   if (isSummarizing) return null;
 
-  const interval = session.chapterTurnInterval || settings.contextWindow.chapterTurnInterval || 10;
+  const interval = session.chapterTurnInterval || settings.contextWindow?.chapterTurnInterval || 10;
   
-  // Count user turns
-  const userMessages = allMessages.filter((m) => m.role === 'user');
-  const totalUserTurns = userMessages.length;
+  // Collect all user messages and their indices
+  const userMessageIndices: number[] = [];
+  for (let i = 0; i < allMessages.length; i++) {
+    if (allMessages[i].role === 'user') {
+      userMessageIndices.push(i);
+    }
+  }
 
+  const totalUserTurns = userMessageIndices.length;
   const existingChapters = session.chapters || [];
   const nextChapterNumber = existingChapters.length + 1;
-  const startTurnIndex = existingChapters.length * interval;
 
-  // If not forced, require at least interval turns to form a new chapter
+  // The 0-based user turn index range for this chapter:
+  // e.g. for Chapter 1 with interval 10: turns 0 to 9 (1st to 10th user turn)
+  // for Chapter 2: turns 10 to 19 (11th to 20th user turn)
+  const startUserTurnIndex = existingChapters.length * interval;
+  const targetEndUserTurnIndex = nextChapterNumber * interval - 1;
+
+  // If not forced, require at least targetEndUserTurnIndex user turns to be reached
   if (!force && totalUserTurns < nextChapterNumber * interval) {
     return null;
   }
 
-  // Find the slice of messages covering this chapter
-  // (from the (startTurnIndex)-th user turn onwards)
-  let userTurnsSeen = 0;
-  let startMsgIdx = 0;
-  for (let i = 0; i < allMessages.length; i++) {
-    if (allMessages[i].role === 'user') {
-      if (userTurnsSeen === startTurnIndex) {
-        startMsgIdx = i;
-        break;
-      }
-      userTurnsSeen++;
-    }
+  if (startUserTurnIndex >= totalUserTurns) {
+    return null; // All user turns already summarized into chapters
   }
 
-  // Chapter ends either at (nextChapterNumber * interval) turns or at the end of messages if forced
-  const chapterMessages = allMessages.slice(startMsgIdx);
+  // End turn index for this chapter: capped strictly at targetEndUserTurnIndex (or totalUserTurns - 1 if forced)
+  const endUserTurnIndex = force 
+    ? Math.min(totalUserTurns - 1, targetEndUserTurnIndex)
+    : targetEndUserTurnIndex;
+
+  // Determine message slice in allMessages for THIS CHAPTER ONLY
+  // If Chapter 1: start from message 0 to capture initial character scene setting / greeting
+  // Subsequent chapters: start from the first user message of that chapter
+  const startMsgIdx = nextChapterNumber === 1 ? 0 : userMessageIndices[startUserTurnIndex];
+
+  // End message index: up through the assistant response to the endUserTurn
+  let endMsgIdx = allMessages.length;
+  if (endUserTurnIndex + 1 < userMessageIndices.length) {
+    // There is a subsequent user turn; the slice ends where the NEXT user turn starts
+    endMsgIdx = userMessageIndices[endUserTurnIndex + 1];
+  }
+
+  const chapterMessages = allMessages.slice(startMsgIdx, endMsgIdx);
   if (chapterMessages.length < 2) return null;
 
   const chapterTurnsText = chapterMessages
@@ -64,7 +80,7 @@ export async function generateChapterSummary(params: {
   isSummarizing = true;
   try {
     // Determine which summarizer model profile to use
-    // Must strictly have an active model configured in Background Summarizer BYOK!
+    // Must strictly have an active model configured in Summary Model!
     const activeProfile = settings.summarizerProfiles.find((p) => p.id === settings.summarizerModel.profileId)
       || (settings.summarizerProfiles.length > 0 ? settings.summarizerProfiles[0] : null);
 
@@ -81,16 +97,16 @@ export async function generateChapterSummary(params: {
       .map((c) => `Chapter ${c.chapterNumber} (${c.title}): ${c.summary}`)
       .join('\n\n');
 
-    const promptText = `Produce Chapter ${nextChapterNumber} summary for this roleplay campaign.
+    const promptText = `Summarize Chapter ${nextChapterNumber} (User Turns ${startUserTurnIndex + 1}–${endUserTurnIndex + 1}) for this ongoing roleplay chronicle.
 Format your output EXACTLY as:
 TITLE: <Vivid Chapter Title, 3-6 words>
-SUMMARY: <Cohesive, literature-grade third-person narrative chronicle of key revelations, character dynamics, battles, emotional milestones, and world state shifts from these turns in 2-3 paragraphs>`;
+SUMMARY: <Cohesive, literature-grade third-person narrative chronicle of key revelations, character dynamics, battles, emotional milestones, and world state shifts that happened in THESE SPECIFIC TURNS in 2-3 dense paragraphs. Do NOT re-summarize past chapters.>`;
 
     const responseText = await requestBackgroundSummary({
       provider,
       model,
       existingSummary: previousChaptersSummary,
-      turnsToSummarize: `${promptText}\n\nTURNS FOR CHAPTER ${nextChapterNumber}:\n${chapterTurnsText}`,
+      turnsToSummarize: `${promptText}\n\nTURNS FOR CHAPTER ${nextChapterNumber} (TURNS ${startUserTurnIndex + 1} TO ${endUserTurnIndex + 1}):\n${chapterTurnsText}`,
       characterName: character.name,
       personaName: persona.name,
       apiKey,
@@ -115,17 +131,17 @@ SUMMARY: <Cohesive, literature-grade third-person narrative chronicle of key rev
     const newChapter: ChapterRecord = {
       chapterNumber: nextChapterNumber,
       title: chapterTitle,
-      startTurn: startTurnIndex + 1,
-      endTurn: totalUserTurns,
+      startTurn: startUserTurnIndex + 1,
+      endTurn: endUserTurnIndex + 1,
       summary: chapterSummary,
       createdAt: Date.now(),
     };
 
     const updatedChapters = [...existingChapters, newChapter];
 
-    // Also update rolling summary to include this chapter
+    // Compile chapters one after another
     const updatedRolling = updatedChapters
-      .map((c) => `[CHAPTER ${c.chapterNumber}: ${c.title}]\n${c.summary}`)
+      .map((c) => `[CHAPTER ${c.chapterNumber}: ${c.title} (Turns ${c.startTurn}–${c.endTurn})]\n${c.summary}`)
       .join('\n\n');
 
     await db.sessions.update(session.id, {
@@ -146,6 +162,7 @@ SUMMARY: <Cohesive, literature-grade third-person narrative chronicle of key rev
 /**
  * Checks if the message count warrants a rolling summary / chapter update,
  * and asynchronously triggers the Background Summarizer Model.
+ * Automatically catches up on all pending chapters if multiple intervals have passed.
  */
 export async function checkAndTriggerRollingSummary(params: {
   session: ChatSessionRecord;
@@ -158,26 +175,45 @@ export async function checkAndTriggerRollingSummary(params: {
 }): Promise<void> {
   const { session, character, persona, allMessages, settings, onSummaryUpdated, onError } = params;
 
-  if (!settings.contextWindow.autoTriggerSummary) return;
+  // Auto-trigger is enabled by default unless explicitly set to false
+  if (settings.contextWindow?.autoTriggerSummary === false) return;
 
   try {
-    const newChapter = await generateChapterSummary({
-      session,
-      character,
-      persona,
-      allMessages,
-      settings,
-      force: false,
-    });
+    const userMessageCount = allMessages.filter((m) => m.role === 'user').length;
+    const interval = session.chapterTurnInterval || settings.contextWindow?.chapterTurnInterval || 10;
+    
+    let currentChapters = [...(session.chapters || [])];
+    let hasUpdated = false;
 
-    if (newChapter && onSummaryUpdated) {
-      const updatedChapters = [...(session.chapters || []), newChapter];
-      const updatedRolling = updatedChapters
-        .map((c) => `[CHAPTER ${c.chapterNumber}: ${c.title}]\n${c.summary}`)
+    // Loop to catch up all pending chapters (e.g. at 12 turns with interval 10 -> Chapter 1; at 25 turns -> Chapter 1 then 2)
+    while (userMessageCount >= (currentChapters.length + 1) * interval) {
+      const workingSession: ChatSessionRecord = {
+        ...session,
+        chapters: currentChapters,
+      };
+
+      const newChapter = await generateChapterSummary({
+        session: workingSession,
+        character,
+        persona,
+        allMessages,
+        settings,
+        force: false,
+      });
+
+      if (!newChapter) break;
+
+      currentChapters.push(newChapter);
+      hasUpdated = true;
+    }
+
+    if (hasUpdated && onSummaryUpdated) {
+      const updatedRolling = currentChapters
+        .map((c) => `[CHAPTER ${c.chapterNumber}: ${c.title} (Turns ${c.startTurn}–${c.endTurn})]\n${c.summary}`)
         .join('\n\n');
 
       onSummaryUpdated({
-        chapters: updatedChapters,
+        chapters: currentChapters,
         rollingSummary: updatedRolling,
       });
     }

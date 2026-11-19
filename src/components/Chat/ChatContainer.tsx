@@ -145,6 +145,34 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
         .sortBy('timestamp');
 
       setMessages(msgs);
+
+      // Automatically catch up pending chapters on session load
+      const userTurns = msgs.filter((m) => m.role === 'user').length;
+      const chCount = currentSession.chapters?.length || 0;
+      const interval = currentSession.chapterTurnInterval || settings.contextWindow?.chapterTurnInterval || 10;
+      if (userTurns >= (chCount + 1) * interval) {
+        getAppSettings().then((freshSettings) => {
+          checkAndTriggerRollingSummary({
+            session: currentSession!,
+            character,
+            persona,
+            allMessages: msgs,
+            settings: freshSettings,
+            onSummaryUpdated: (updatedFields) => {
+              setSession((prev) => (prev ? { ...prev, ...updatedFields } : null));
+              setSummarizerError(null);
+            },
+            onError: (err) => {
+              const msg = err.message || String(err);
+              if (msg.includes('Please connect Summarizer Model')) {
+                setSummarizerError('Please connect a model in Settings > Summary Model to generate chapter summaries.');
+              } else {
+                setSummarizerError(`Summary generation failed: ${msg}`);
+              }
+            },
+          });
+        });
+      }
     } catch (err) {
       console.error('Failed to initialize chat session:', err);
     }
@@ -276,8 +304,11 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                 setSummarizerError(null);
               },
               onError: (err) => {
-                if (err.message && err.message.includes('Please connect Summarizer Model')) {
-                  setSummarizerError('Please connect Summarizer Model in Settings (Background Summarizer BYOK) to generate automatic chapter summaries.');
+                const msg = err.message || String(err);
+                if (msg.includes('Please connect Summarizer Model')) {
+                  setSummarizerError('Please connect a model in Settings > Summary Model to generate automatic chapter summaries.');
+                } else {
+                  setSummarizerError(`Summary generation failed: ${msg}`);
                 }
               },
             });

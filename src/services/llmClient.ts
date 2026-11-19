@@ -507,32 +507,120 @@ export async function requestBackgroundSummary(params: {
   apiKey?: string;
   baseUrl?: string;
 }): Promise<string> {
+  const { provider, model, existingSummary, turnsToSummarize, characterName, personaName, apiKey, baseUrl } = params;
+
+  // 1. Try Proxy first
   try {
     const res = await fetch('/api/summarize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-provider': params.provider,
-        ...(params.apiKey ? { 'x-api-key': params.apiKey } : {}),
-        ...(params.baseUrl ? { 'x-base-url': params.baseUrl } : {}),
+        'x-provider': provider,
+        ...(apiKey ? { 'x-api-key': apiKey } : {}),
+        ...(baseUrl ? { 'x-base-url': baseUrl } : {}),
       },
       body: JSON.stringify(params),
     });
 
     if (res.ok) {
       const json = await res.json();
-      return json.summary || '';
+      if (json.summary) return json.summary.trim();
     } else {
       const errJson = await res.json().catch(() => null);
       if (errJson?.error) {
-        throw new Error(errJson.error);
+        console.warn('[requestBackgroundSummary] Proxy returned error:', errJson.error);
       }
     }
   } catch (err: any) {
-    console.warn('[requestBackgroundSummary] Proxy error:', err);
-    throw err;
+    console.warn('[requestBackgroundSummary] Proxy offline or error, falling back to direct browser fetch.', err);
   }
-  return '';
+
+  // 2. Direct browser fallback
+  const effectiveBase = (baseUrl?.trim() || PROVIDER_DEFAULT_BASE_URLS[provider]).replace(/\/+$/, '');
+
+  const systemPrompt = `You are a meticulous narrative archivist and summarizer for an ongoing roleplay chronicle.
+Your mission is to digest ONLY the provided roleplay turns into a self-contained, atmospheric chapter summary.
+- Highlight major plot shifts, key character revelations, location changes, physical status, and relational tension that occurred in THESE specific turns between ${characterName} and ${personaName}.
+- Keep the summary literature-grade, objective, and dense with narrative facts.
+- Do NOT re-summarize past chapters. Focus strictly on what happened in these turns.
+- Format your response EXACTLY as:
+TITLE: <Vivid Chapter Title, 3-6 words>
+SUMMARY: <Cohesive, literature-grade third-person narrative chronicle of these turns in 2-3 dense paragraphs>
+- Do NOT include conversational filler, greetings, or meta-chatter.`;
+
+  const userPrompt = existingSummary 
+    ? `PRIOR STORY CONTEXT (FOR BACKGROUND REFERENCE ONLY — DO NOT RE-SUMMARIZE THESE PREVIOUS CHAPTERS):\n${existingSummary}\n\nTURNS TO SUMMARIZE FOR THIS NEW CHAPTER:\n${turnsToSummarize}\n\nSynthesize the self-contained summary for this new chapter:`
+    : `TURNS TO SUMMARIZE FOR THIS NEW CHAPTER:\n${turnsToSummarize}\n\nSynthesize the self-contained summary for this new chapter:`;
+
+  if (provider === 'anthropic') {
+    const res = await fetch(`${effectiveBase}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+        ...(apiKey ? { 'x-api-key': apiKey } : {}),
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: userPrompt }],
+        system: systemPrompt,
+        max_tokens: 800,
+        temperature: 0.3,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Anthropic HTTP ${res.status}: ${err.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    return data.content?.[0]?.text?.trim() || '';
+  }
+
+  // OpenAI-compatible direct call (Groq, OpenRouter, Gemini, Mistral, OpenAI, Ollama)
+  let cleanBase = effectiveBase;
+  if (provider === 'gemini' && !cleanBase.includes('/openai')) {
+    cleanBase = `${cleanBase}/openai`;
+  }
+  let endpoint = cleanBase.endsWith('/chat/completions') ? cleanBase : `${cleanBase}/chat/completions`;
+  if (provider === 'gemini' && apiKey) {
+    const sep = endpoint.includes('?') ? '&' : '?';
+    endpoint = `${endpoint}${sep}key=${encodeURIComponent(apiKey)}`;
+  }
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      max_tokens: 800,
+      temperature: 0.3,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`${provider} HTTP ${res.status}: ${err.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  const choiceMsg = data.choices?.[0]?.message;
+  let text = '';
+  if (typeof choiceMsg?.content === 'string') {
+    text = choiceMsg.content.trim();
+  } else if (Array.isArray(choiceMsg?.content)) {
+    text = choiceMsg.content.map((c: any) => c.text || '').join('').trim();
+  } else if (choiceMsg?.reasoning_content) {
+    text = choiceMsg.reasoning_content.trim();
+  }
+  return text;
 }
 
 export async function requestAiWorldStateUpdate(params: {
