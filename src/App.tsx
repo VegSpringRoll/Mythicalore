@@ -9,6 +9,8 @@ import { CardGalleryModal } from './components/CardGallery/CardGalleryModal';
 import { PersonaModal } from './components/Persona/PersonaModal';
 import { SettingsDrawer } from './components/Settings/SettingsDrawer';
 import { LorebookManagerModal } from './components/Lorebook/LorebookManagerModal';
+import { ImageApiModal } from './components/ImageApi/ImageApiModal';
+import { EnterIsekaiModal } from './components/Isekai/EnterIsekaiModal';
 import { ChatContainer } from './components/Chat/ChatContainer';
 import { ChatHistoryModal } from './components/Chat/ChatHistoryModal';
 import { ConnectionIndicator } from './components/Header/ConnectionIndicator';
@@ -25,7 +27,9 @@ import {
   Cpu, 
   PenTool,
   Menu,
-  X
+  X,
+  Image as ImageIcon,
+  Compass
 } from 'lucide-react';
 
 export default function App() {
@@ -42,6 +46,8 @@ export default function App() {
   const [isLorebookOpen, setIsLorebookOpen] = useState(false);
   const [isWorldStateOpen, setIsWorldStateOpen] = useState(false);
   const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false);
+  const [isImageApiOpen, setIsImageApiOpen] = useState(false);
+  const [isIsekaiOpen, setIsIsekaiOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeAtmosphere, setActiveAtmosphere] = useState<string>('Mysterious');
 
@@ -185,6 +191,16 @@ export default function App() {
               <Layers className="w-4 h-4" />
             </button>
 
+            {/* Enter Isekai Button */}
+            <button
+              type="button"
+              onClick={() => setIsIsekaiOpen(true)}
+              className="h-10 w-10 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/10 flex items-center justify-center transition-all group"
+              title="Enter Isekai (Anime & Fiction Universes)"
+            >
+              <Compass className="w-4 h-4 group-hover:rotate-45 transition-transform text-white" />
+            </button>
+
             {/* Story Chronicles & Rolling Summary Button */}
             <button
               type="button"
@@ -207,6 +223,19 @@ export default function App() {
               title="Lorebook"
             >
               <Bookmark className="w-4 h-4" />
+            </button>
+
+            {/* Image API Button */}
+            <button
+              type="button"
+              onClick={() => setIsImageApiOpen(true)}
+              className="h-10 w-10 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/10 flex items-center justify-center transition-all relative"
+              title="Image API (Cloudflare Workers AI)"
+            >
+              <ImageIcon className="w-4 h-4" />
+              {settings?.imageApi?.accountId && settings?.imageApi?.apiToken ? (
+                <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+              ) : null}
             </button>
           </div>
         </div>
@@ -300,6 +329,18 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     setIsMobileDrawerOpen(false);
+                    setIsIsekaiOpen(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-zinc-200 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <Compass className="w-4 h-4 text-zinc-300" />
+                  <span>Enter Isekai</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
                     setIsWorldStateOpen(true);
                   }}
                   className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/10 transition-colors"
@@ -318,6 +359,25 @@ export default function App() {
                 >
                   <Bookmark className="w-4 h-4 text-zinc-400" />
                   <span>Lorebook</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    setIsImageApiOpen(true);
+                  }}
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <ImageIcon className="w-4 h-4 text-zinc-400" />
+                    <span>Image API (Cloudflare)</span>
+                  </div>
+                  {settings?.imageApi?.accountId && settings?.imageApi?.apiToken ? (
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      Active
+                    </span>
+                  ) : null}
                 </button>
 
                 <button
@@ -487,7 +547,6 @@ export default function App() {
               onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenGallery={() => setIsGalleryOpen(true)}
               onAtmosphereChange={setActiveAtmosphere}
-              onUpdateSettings={setSettings}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center p-6 text-center relative overflow-hidden">
@@ -563,6 +622,29 @@ export default function App() {
         characterName={activeCharacter?.name}
         onClose={() => setIsLorebookOpen(false)}
       />
+
+      {settings && (
+        <ImageApiModal
+          isOpen={isImageApiOpen}
+          settings={settings}
+          onUpdateSettings={(updated) => setSettings(updated)}
+          onClose={() => setIsImageApiOpen(false)}
+        />
+      )}
+
+      {activePersona && settings && (
+        <EnterIsekaiModal
+          isOpen={isIsekaiOpen}
+          settings={settings}
+          activePersona={activePersona}
+          onEnterWorld={({ character, session }) => {
+            setActiveCharacter(character);
+            setActiveSessionId(session.id);
+            setChatSessionKey((k) => k + 1);
+          }}
+          onClose={() => setIsIsekaiOpen(false)}
+        />
+      )}
     </div>
   );
 }

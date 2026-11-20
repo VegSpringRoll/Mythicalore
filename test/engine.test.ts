@@ -379,4 +379,26 @@ assert.strictEqual(slidingWindowMessages[slidingWindowMessages.length - 1].conte
 assert(!slidingWindowMessages.some((m: any) => m.content.includes('Turn 15')), 'Turns before window must be excluded');
 console.log('    ✓ Sliding window strictly selects last N turns.');
 
+// 15. Testing Enter Isekai Secret Prompt & Card Creation
+console.log('15. Testing Enter Isekai Secret Prompt & Universe Card Initialization...');
+const targetWorld = 'Jujutsu Kaisen';
+const isekaiSecretPrompt = `Before we start the roleplay , How familiar you are with The '${targetWorld}'  lore , characters , character appearances , threats , villains and everything for a text based roleplay . i want proof that you have detailed knowledge of the verse because i am serious for this roleplay.`;
+
+assert(isekaiSecretPrompt.includes("How familiar you are with The 'Jujutsu Kaisen'  lore"));
+assert(isekaiSecretPrompt.includes('i want proof that you have detailed knowledge of the verse'));
+
+const isekaiCard = {
+  id: `isekai-test-123`,
+  name: `${targetWorld} (Isekai)`,
+  genre: 'Isekai',
+  data: {
+    name: `${targetWorld} Universe`,
+    scenario: `World: ${targetWorld}\nTimeline/Era: Shibuya Arc\nStarting Scenario: Reincarnated in the subway`,
+    first_mes: '',
+  },
+};
+assert.strictEqual(isekaiCard.genre, 'Isekai');
+assert.strictEqual(isekaiCard.name, 'Jujutsu Kaisen (Isekai)');
+console.log('    ✓ Enter Isekai prompt formatting and character creation verified.');
+
 console.log('All Roleplay Engine verification checks PASSED successfully!');

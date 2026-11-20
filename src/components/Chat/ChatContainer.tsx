@@ -42,7 +42,6 @@ interface ChatContainerProps {
   onOpenSettings: () => void;
   onOpenGallery: () => void;
   onAtmosphereChange?: (atmosphere: string) => void;
-  onUpdateSettings?: (settings: AppSettingsRecord) => void;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -54,7 +53,6 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   setIsWorldStateOpen,
   onOpenSettings,
   onAtmosphereChange,
-  onUpdateSettings,
 }) => {
   const [session, setSession] = useState<ChatSessionRecord | null>(null);
   const [messages, setMessages] = useState<ChatMessageRecord[]>([]);
@@ -439,6 +437,21 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
       controller.signal
     );
   };
+
+  // Auto-trigger opening response for newly created Isekai worlds (1 pending user prompt, 0 assistant replies)
+  const hasTriggeredInitialRef = useRef(false);
+  useEffect(() => {
+    if (
+      session &&
+      messages.length === 1 &&
+      messages[0].role === 'user' &&
+      !isStreaming &&
+      !hasTriggeredInitialRef.current
+    ) {
+      hasTriggeredInitialRef.current = true;
+      triggerAiGeneration(messages);
+    }
+  }, [session, messages, isStreaming]);
 
   const handleSendMessage = async () => {
     if (!draftInput.trim() || isStreaming || !session) return;
@@ -921,7 +934,6 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
           settings={settings}
           summaryError={summarizerError}
           onUpdateSession={(updated) => setSession(updated)}
-          onUpdateSettings={onUpdateSettings}
           onClose={() => setIsWorldStateOpen(false)}
         />
       )}
