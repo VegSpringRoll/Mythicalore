@@ -61,78 +61,95 @@ export const SoundwavePill: React.FC<SoundwavePillProps> = ({
   return (
     <div className="relative inline-block" ref={dropdownRef}>
       {/* Soundwave Pill Button */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-full border text-xs font-mono transition-all ${
-          state.isPlaying
-            ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_0_15px_rgba(255,255,255,0.2)] hover:border-white/60'
-            : 'bg-black/50 border-white/10 text-zinc-500 hover:border-white/25 hover:text-zinc-300'
-        }`}
-        title={
-          state.isPlaying
-            ? `BGM Active: ${state.currentTrack?.title || state.currentMood}. Click for volume & controls.`
-            : 'Soundscape BGM (Muted/Paused). Click to play and adjust.'
-        }
-      >
-        {/* Animated Soundwave Equalizer Bars */}
-        <div 
-          onClick={handleToggle}
-          className="flex items-end gap-[2.5px] h-3 w-3.5 cursor-pointer py-0.5"
-          title={state.isPlaying ? 'Pause BGM' : 'Play BGM'}
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => {
+            soundscape.togglePlay();
+          }}
+          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-l-full border text-xs font-mono transition-all ${
+            state.isPlaying
+              ? 'bg-white/[0.12] border-white/40 text-white shadow-[0_0_15px_rgba(255,255,255,0.2)] hover:border-white/60'
+              : 'bg-black/50 border-white/10 text-zinc-500 hover:border-white/25 hover:text-zinc-300'
+          }`}
+          title={state.isPlaying ? 'BGM Playing. Click to Pause.' : 'BGM Paused. Click to Play.'}
         >
-          <span
-            className={`w-[2.5px] rounded-full transition-all duration-300 ${
-              state.isPlaying
-                ? 'bg-white animate-[bounce_0.8s_ease-in-out_infinite_alternate] h-3 shadow-[0_0_6px_rgba(255,255,255,0.8)]'
-                : 'bg-zinc-600 h-1.5'
-            }`}
-          />
-          <span
-            className={`w-[2.5px] rounded-full transition-all duration-300 ${
-              state.isPlaying
-                ? 'bg-white animate-[bounce_1.1s_ease-in-out_0.2s_infinite_alternate] h-2.5 shadow-[0_0_6px_rgba(255,255,255,0.8)]'
-                : 'bg-zinc-600 h-2'
-            }`}
-          />
-          <span
-            className={`w-[2.5px] rounded-full transition-all duration-300 ${
-              state.isPlaying
-                ? 'bg-white animate-[bounce_0.9s_ease-in-out_0.4s_infinite_alternate] h-3.5 shadow-[0_0_6px_rgba(255,255,255,0.8)]'
-                : 'bg-zinc-600 h-1'
-            }`}
-          />
-        </div>
+          {/* Animated Equalizer Bars */}
+          <div className="flex items-end gap-[2.5px] h-3 w-3.5 py-0.5">
+            <span
+              className={`w-[2.5px] rounded-full transition-all duration-300 ${
+                state.isPlaying
+                  ? 'bg-white animate-[bounce_0.8s_ease-in-out_infinite_alternate] h-3 shadow-[0_0_6px_rgba(255,255,255,0.8)]'
+                  : 'bg-zinc-600 h-1.5'
+              }`}
+            />
+            <span
+              className={`w-[2.5px] rounded-full transition-all duration-300 ${
+                state.isPlaying
+                  ? 'bg-white animate-[bounce_1.1s_ease-in-out_0.2s_infinite_alternate] h-2.5 shadow-[0_0_6px_rgba(255,255,255,0.8)]'
+                  : 'bg-zinc-600 h-2'
+              }`}
+            />
+            <span
+              className={`w-[2.5px] rounded-full transition-all duration-300 ${
+                state.isPlaying
+                  ? 'bg-white animate-[bounce_0.9s_ease-in-out_0.4s_infinite_alternate] h-3.5 shadow-[0_0_6px_rgba(255,255,255,0.8)]'
+                  : 'bg-zinc-600 h-1'
+              }`}
+            />
+          </div>
 
-        <span className="hidden md:inline font-semibold text-[11px] truncate max-w-[85px]">
-          {state.isPlaying ? state.currentMood : 'BGM'}
-        </span>
-      </button>
+          <span className="hidden sm:inline font-semibold text-[11px] truncate max-w-[85px]">
+            {state.isPlaying ? state.currentMood : 'BGM'}
+          </span>
+        </button>
+
+        {/* Dropdown Options Toggle */}
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className={`px-1.5 py-1.5 rounded-r-full border-y border-r text-xs transition-all ${
+            state.isPlaying
+              ? 'bg-white/[0.12] border-white/40 text-white hover:bg-white/[0.2]'
+              : 'bg-black/50 border-white/10 text-zinc-500 hover:text-zinc-300 hover:border-white/25'
+          }`}
+          title="Soundscape Settings & Atmosphere Moods"
+        >
+          <span className="text-[10px] block leading-none">▾</span>
+        </button>
+      </div>
 
       {/* Sleek Floating Soundscape Card */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-[#0c0c0f]/95 backdrop-blur-2xl border border-white/20 p-4 shadow-[0_15px_50px_rgba(0,0,0,0.85)] z-50 animate-fadeIn space-y-3.5">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-            <div className="flex items-center gap-2">
-              <Music className="w-4 h-4 text-white" />
-              <div>
-                <h4 className="text-xs font-bold text-white tracking-tight">Adaptive Soundscape</h4>
-                <p className="text-[10px] text-zinc-400">Royalty-free via freetouse.com</p>
+        <>
+          {/* Mobile Backdrop */}
+          <div 
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] sm:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="fixed left-3 right-3 top-16 sm:top-full sm:left-auto sm:right-0 sm:absolute mt-2 sm:w-80 max-w-sm rounded-2xl bg-[#0c0c0f]/98 backdrop-blur-2xl border border-white/25 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.95)] z-50 animate-fadeIn space-y-3.5">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Music className="w-4 h-4 text-white" />
+                <div>
+                  <h4 className="text-xs font-bold text-white tracking-tight">Adaptive Soundscape</h4>
+                  <p className="text-[10px] text-zinc-400">Royalty-free via freetouse.com</p>
+                </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={handleToggle}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                state.isPlaying
-                  ? 'bg-white text-black shadow-[0_0_12px_rgba(255,255,255,0.3)] hover:bg-zinc-200'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
-            >
-              {state.isPlaying ? 'Pause' : 'Play'}
-            </button>
+              <button
+                type="button"
+                onClick={handleToggle}
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                  state.isPlaying
+                    ? 'bg-white text-black shadow-[0_0_12px_rgba(255,255,255,0.3)] hover:bg-zinc-200'
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+              >
+                {state.isPlaying ? 'Pause' : 'Play'}
+              </button>
+            </div>
           </div>
 
           {/* Current Track Banner */}
@@ -194,7 +211,7 @@ export const SoundwavePill: React.FC<SoundwavePillProps> = ({
               ))}
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

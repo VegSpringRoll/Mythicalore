@@ -28,7 +28,8 @@ import {
   Flame,
   Users,
   MapPin,
-  Compass
+  Compass,
+  X
 } from 'lucide-react';
 
 interface ChatContainerProps {
@@ -636,89 +637,105 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
 
             {/* Sleek Dark Card Dropdown */}
             {isStateCardOpen && (
-              <div className="absolute left-0 mt-2 w-72 sm:w-80 rounded-2xl bg-[#0c0c0f]/95 backdrop-blur-2xl border border-white/20 p-4 shadow-[0_15px_50px_rgba(0,0,0,0.9)] z-50 animate-fadeIn space-y-3">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                  <div className="flex items-center gap-2">
-                    <Compass className="w-4 h-4 text-white" />
-                    <h4 className="text-xs font-bold text-white tracking-tight">Scene Telemetry</h4>
-                  </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-zinc-300">
-                    Live State
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  {/* Time */}
-                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-0.5">
-                    <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-zinc-400" />
-                      <span>Time</span>
-                    </span>
-                    <p className="text-white font-mono font-semibold truncate">
-                      {session?.worldState?.time || 'Midnight (23:45)'}
-                    </p>
-                  </div>
-
-                  {/* Date */}
-                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-0.5">
-                    <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-zinc-400" />
-                      <span>Date</span>
-                    </span>
-                    <p className="text-white font-mono font-semibold truncate">
-                      {session?.worldState?.date || 'Day 14, Eclipse'}
-                    </p>
-                  </div>
-
-                  {/* Weather */}
-                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-0.5">
-                    <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
-                      <CloudRain className="w-3 h-3 text-zinc-400" />
-                      <span>Weather</span>
-                    </span>
-                    <p className="text-white font-semibold truncate">
-                      {session?.worldState?.weather || 'Clear Night'}
-                    </p>
-                  </div>
-
-                  {/* Mood */}
-                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-0.5">
-                    <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
-                      <Flame className="w-3 h-3 text-zinc-400" />
-                      <span>Mood</span>
-                    </span>
-                    <p className="text-white font-semibold truncate">
-                      {session?.worldState?.mood || 'Mysterious'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Active NPCs */}
-                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-1">
-                  <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
-                    <Users className="w-3 h-3 text-zinc-400" />
-                    <span>Active Characters / NPCs</span>
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    {(session?.worldState?.activeNpcs && session.worldState.activeNpcs.length > 0
-                      ? session.worldState.activeNpcs
-                      : [character.name]
-                    ).map((npc, idx) => (
-                      <span key={idx} className="text-[10px] font-medium px-2 py-0.5 rounded-lg bg-white/10 text-white border border-white/10">
-                        {npc}
+              <>
+                {/* Mobile Backdrop for tap to dismiss */}
+                <div 
+                  className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] sm:hidden"
+                  onClick={() => setIsStateCardOpen(false)}
+                />
+                <div className="fixed left-3 right-3 top-20 sm:top-full sm:left-0 sm:right-auto sm:absolute mt-2 sm:w-80 max-w-sm rounded-2xl bg-[#0c0c0f]/98 backdrop-blur-2xl border border-white/25 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.95)] z-50 animate-fadeIn space-y-3">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Compass className="w-4 h-4 text-white" />
+                      <h4 className="text-xs font-bold text-white tracking-tight">Scene Status & Telemetry</h4>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-zinc-300">
+                        Live State
                       </span>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => setIsStateCardOpen(false)}
+                        className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors sm:hidden"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Location */}
-                {session?.worldState?.location && (
-                  <div className="p-2 rounded-xl bg-white/[0.02] border border-white/5 text-[10px] text-zinc-400 flex items-center gap-1.5">
-                    <MapPin className="w-3 h-3 text-zinc-400 shrink-0" />
-                    <span className="truncate">{session.worldState.location}</span>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    {/* Time */}
+                    <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 space-y-0.5">
+                      <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-zinc-400" />
+                        <span>Time</span>
+                      </span>
+                      <p className="text-white font-mono font-semibold break-words">
+                        {session?.worldState?.time || 'Midnight (23:45)'}
+                      </p>
+                    </div>
+
+                    {/* Date */}
+                    <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 space-y-0.5">
+                      <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-zinc-400" />
+                        <span>Date</span>
+                      </span>
+                      <p className="text-white font-mono font-semibold break-words">
+                        {session?.worldState?.date || 'Day 14, Eclipse'}
+                      </p>
+                    </div>
+
+                    {/* Weather */}
+                    <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 space-y-0.5">
+                      <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+                        <CloudRain className="w-3 h-3 text-zinc-400" />
+                        <span>Weather</span>
+                      </span>
+                      <p className="text-white font-semibold break-words">
+                        {session?.worldState?.weather || 'Clear Night'}
+                      </p>
+                    </div>
+
+                    {/* Mood */}
+                    <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 space-y-0.5">
+                      <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+                        <Flame className="w-3 h-3 text-zinc-400" />
+                        <span>Mood</span>
+                      </span>
+                      <p className="text-white font-semibold break-words">
+                        {session?.worldState?.mood || 'Mysterious'}
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Active NPCs */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 space-y-1">
+                    <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+                      <Users className="w-3 h-3 text-zinc-400" />
+                      <span>Active Characters / NPCs</span>
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {(session?.worldState?.activeNpcs && session.worldState.activeNpcs.length > 0
+                        ? session.worldState.activeNpcs
+                        : [character.name]
+                      ).map((npc, idx) => (
+                        <span key={idx} className="text-[10px] font-medium px-2 py-0.5 rounded-lg bg-white/10 text-white border border-white/10">
+                          {npc}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  {session?.worldState?.location && (
+                    <div className="p-2 rounded-xl bg-white/[0.03] border border-white/10 text-[10px] text-zinc-300 flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 text-zinc-400 shrink-0" />
+                      <span className="break-words">{session.worldState.location}</span>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>

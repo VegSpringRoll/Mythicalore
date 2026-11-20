@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { PersonaRecord } from '../../types/persona';
+import { PersonaRecord, PersonaMove } from '../../types/persona';
 import { db } from '../../db';
 import { blobToDataUrl } from '../../services/pngParser';
-import { User, Plus, Check, Edit3, Trash2, X, Image as ImageIcon, Shield } from 'lucide-react';
+import { User, Plus, Check, Edit3, Trash2, X, Image as ImageIcon, Shield, Zap, Key } from 'lucide-react';
 
 interface PersonaModalProps {
   isOpen: boolean;
@@ -31,6 +31,14 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
   const [backgroundLore, setBackgroundLore] = useState('');
   const [lorebookMoveset, setLorebookMoveset] = useState('');
   const [isDefault, setIsDefault] = useState(false);
+
+  // Movesets / Abilities (Lorebook Style)
+  const [moves, setMoves] = useState<PersonaMove[]>([]);
+  const [isEditingMove, setIsEditingMove] = useState(false);
+  const [editingMoveId, setEditingMoveId] = useState<string | null>(null);
+  const [moveName, setMoveName] = useState('');
+  const [moveTriggersStr, setMoveTriggersStr] = useState('');
+  const [moveDescription, setMoveDescription] = useState('');
 
   const loadPersonas = async () => {
     const list = await db.personas.toArray();
@@ -61,6 +69,7 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
       setPsychologicalTraits(persona.psychologicalTraits || '');
       setBackgroundLore(persona.backgroundLore || '');
       setLorebookMoveset(persona.lorebookMoveset || '');
+      setMoves(persona.moves ? [...persona.moves] : []);
       setIsDefault(Boolean(persona.isDefault));
     } else {
       setEditingPersona(null);
@@ -72,9 +81,68 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
       setPsychologicalTraits('');
       setBackgroundLore('');
       setLorebookMoveset('');
+      setMoves([]);
       setIsDefault(personas.length === 0);
     }
+    setIsEditingMove(false);
+    setEditingMoveId(null);
     setIsCreating(true);
+  };
+
+  const handleOpenAddMove = () => {
+    setEditingMoveId(null);
+    setMoveName('');
+    setMoveTriggersStr('');
+    setMoveDescription('');
+    setIsEditingMove(true);
+  };
+
+  const handleOpenEditMove = (move: PersonaMove) => {
+    setEditingMoveId(move.id);
+    setMoveName(move.name);
+    setMoveTriggersStr((move.triggers || []).join(', '));
+    setMoveDescription(move.description);
+    setIsEditingMove(true);
+  };
+
+  const handleSaveMove = () => {
+    if (!moveName.trim() || !moveDescription.trim()) {
+      alert('Please enter an ability name and description.');
+      return;
+    }
+    const triggers = moveTriggersStr
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const newMove: PersonaMove = {
+      id: editingMoveId || `move-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name: moveName.trim(),
+      triggers,
+      description: moveDescription.trim(),
+      enabled: true,
+    };
+
+    let updated: PersonaMove[];
+    if (editingMoveId) {
+      updated = moves.map((m) => (m.id === editingMoveId ? newMove : m));
+    } else {
+      updated = [...moves, newMove];
+    }
+    setMoves(updated);
+    setIsEditingMove(false);
+    setEditingMoveId(null);
+    setMoveName('');
+    setMoveTriggersStr('');
+    setMoveDescription('');
+  };
+
+  const handleDeleteMove = (moveId: string) => {
+    setMoves(moves.filter((m) => m.id !== moveId));
+  };
+
+  const handleToggleMove = (moveId: string) => {
+    setMoves(moves.map((m) => (m.id === moveId ? { ...m, enabled: m.enabled === false ? true : false } : m)));
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,6 +179,7 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
       physiqueAndApparel,
       psychologicalTraits,
       backgroundLore,
+      moves,
       lorebookMoveset,
       isDefault,
       createdAt: editingPersona?.createdAt || Date.now(),
@@ -145,29 +214,26 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-[#0a0a0d]/95 backdrop-blur-2xl border border-white/15 shadow-2xl overflow-hidden my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/40">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-white/10 text-white border border-white/20 shadow-glow-white/10">
-              <User className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 bg-black/40 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 sm:p-2.5 rounded-2xl bg-white/10 text-white border border-white/20 shadow-glow-white/10 shrink-0">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
                 Protagonist Persona Hub
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-zinc-300 border border-white/15">
-                  {`{{user}}`} Macro Anchor
-                </span>
               </h2>
-              <p className="text-xs text-zinc-400">
+              <p className="text-[11px] sm:text-xs text-zinc-400 truncate">
                 Manage and switch your character personas across roleplay scenarios
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {!isCreating && (
               <button
                 onClick={() => openEditor()}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-semibold shadow-glow-white/20 transition-all"
+                className="flex items-center gap-1 sm:gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-semibold shadow-glow-white/20 transition-all whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5 text-black" />
                 <span>New Persona</span>
@@ -310,10 +376,190 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
                 />
               </div>
 
-              {/* Lorebook / Moveset */}
+              {/* Movesets / Abilities (Lorebook Style) */}
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-white" />
+                    <div>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                        Protagonist Movesets &amp; Abilities (Lorebook Style)
+                      </h4>
+                      <p className="text-[10px] text-zinc-400">
+                        Techniques and powers that automatically trigger when keywords appear in chat
+                      </p>
+                    </div>
+                  </div>
+
+                  {!isEditingMove && (
+                    <button
+                      type="button"
+                      onClick={handleOpenAddMove}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/15 transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Move</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Inline Move Editor */}
+                {isEditingMove && (
+                  <div className="p-3.5 rounded-xl bg-black/60 border border-white/20 space-y-3 animate-fadeIn">
+                    <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                      <span className="text-xs font-bold text-white">
+                        {editingMoveId ? 'Edit Move / Ability' : 'New Move / Ability'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingMove(false)}
+                        className="text-zinc-400 hover:text-white p-1"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-300 mb-1">
+                          Ability / Move Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={moveName}
+                          onChange={(e) => setMoveName(e.target.value)}
+                          placeholder="e.g. Shadow Step, Dragon Breath"
+                          className="w-full px-3 py-1.5 rounded-xl bg-black/50 border border-white/15 text-white text-xs focus:outline-none focus:border-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-300 mb-1 flex items-center gap-1">
+                          <Key className="w-3 h-3 text-zinc-400" />
+                          <span>Trigger Words (Comma-Separated)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={moveTriggersStr}
+                          onChange={(e) => setMoveTriggersStr(e.target.value)}
+                          placeholder="e.g. shadow step, teleport, blink"
+                          className="w-full px-3 py-1.5 rounded-xl bg-black/50 border border-white/15 text-white text-xs focus:outline-none focus:border-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-300 mb-1">
+                        Description &amp; Mechanics *
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={moveDescription}
+                        onChange={(e) => setMoveDescription(e.target.value)}
+                        placeholder="Detailed execution, sensory effects, and combat rules when protagonist performs this move..."
+                        className="w-full px-3 py-1.5 rounded-xl bg-black/50 border border-white/15 text-white text-xs leading-relaxed focus:outline-none focus:border-white"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingMove(false)}
+                        className="px-3 py-1 text-xs text-zinc-400 hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveMove}
+                        className="px-4 py-1 rounded-xl bg-white text-black font-semibold text-xs hover:bg-zinc-200"
+                      >
+                        {editingMoveId ? 'Update Move' : 'Add Move'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Moves List */}
+                <div className="space-y-2 pt-1">
+                  {moves.length === 0 ? (
+                    <div className="p-4 rounded-xl border border-dashed border-white/10 text-center text-xs text-zinc-500">
+                      No custom moves added yet. Click &quot;Add Move&quot; above to create abilities with Lorebook-style triggers.
+                    </div>
+                  ) : (
+                    moves.map((m) => (
+                      <div
+                        key={m.id}
+                        className={`p-3 rounded-xl border transition-all ${
+                          m.enabled !== false
+                            ? 'bg-white/[0.04] border-white/15'
+                            : 'bg-white/[0.01] border-white/5 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-white">{m.name}</span>
+                              {m.triggers && m.triggers.length > 0 ? (
+                                m.triggers.map((tr, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-white/10 text-zinc-300 border border-white/10"
+                                  >
+                                    🔑 {tr}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-white/5 text-zinc-400">
+                                  Always Active
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                              {m.description}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleMove(m.id)}
+                              className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
+                                m.enabled !== false
+                                  ? 'bg-white/10 border-white/20 text-white'
+                                  : 'bg-black/40 border-white/10 text-zinc-500'
+                              }`}
+                            >
+                              {m.enabled !== false ? 'Active' : 'Muted'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditMove(m)}
+                              className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10"
+                              title="Edit Move"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMove(m.id)}
+                              className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
+                              title="Delete Move"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* General Gear & Techniques Lore */}
               <div>
                 <label className="block text-xs font-medium text-zinc-300 mb-1">
-                  Special Moveset / Techniques / Gear Lore
+                  General Equipment &amp; Gear Lore (Optional Notes)
                 </label>
                 <textarea
                   rows={2}
@@ -384,9 +630,17 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
                           )}
                         </div>
 
-                        <p className="text-[11px] text-zinc-400 mt-0.5">
-                          {p.gender || 'Protagonist'}
-                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span className="text-[11px] text-zinc-400">
+                            {p.gender || 'Protagonist'}
+                          </span>
+                          {p.moves && p.moves.length > 0 && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-white/10 text-zinc-200 border border-white/15 flex items-center gap-1">
+                              <Zap className="w-2.5 h-2.5 text-white" />
+                              <span>{p.moves.length} {p.moves.length === 1 ? 'Ability' : 'Abilities'}</span>
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-zinc-300 line-clamp-2 mt-1 leading-relaxed">
                           {p.backgroundLore || p.psychologicalTraits || 'No background lore set.'}
                         </p>

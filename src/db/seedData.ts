@@ -77,6 +77,22 @@ export const SEED_PERSONAS: PersonaRecord[] = [
     psychologicalTraits: 'Calculating, guarded, dry wit, highly observant, fiercely loyal once trust is earned, allergic to corporate bureaucracy.',
     backgroundLore: 'Former black-ops counter-intelligence runner turned freelance operator in the neon underbelly. Knows too many forbidden encryption keys.',
     lorebookMoveset: 'Neuro-jamming, optical camouflage spike, close-quarters combat with monomolecular trench knife.',
+    moves: [
+      {
+        id: 'move-cipher-1',
+        name: 'Optical Camouflage Spike',
+        triggers: ['camouflage', 'cloak', 'invisibility', 'stealth'],
+        description: 'Bends ambient photon emissions for 12 seconds, turning Vaelen functionally invisible to optical sensors and human sight.',
+        enabled: true,
+      },
+      {
+        id: 'move-cipher-2',
+        name: 'Neuro-Jamming Spike',
+        triggers: ['neuro-jam', 'jam', 'hack', 'cyber'],
+        description: 'Emits an intense directed EM/neuro-frequency pulse that disorients targeting sensors and organic nervous systems.',
+        enabled: true,
+      },
+    ],
     isDefault: true,
     createdAt: Date.now(),
     updatedAt: Date.now(),

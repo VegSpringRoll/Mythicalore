@@ -69,6 +69,28 @@ Traits: ${persona.psychologicalTraits || 'Not specified'}
 Background: ${persona.backgroundLore || 'Not specified'}
 ${persona.lorebookMoveset ? `Abilities/Gear: ${persona.lorebookMoveset}` : ''}`);
 
+  // Protagonist Movesets & Abilities (Lorebook-style trigger scanner)
+  if (persona.moves && persona.moves.length > 0) {
+    const activeMoves = persona.moves.filter((m) => m.enabled !== false);
+    const triggeredMoves = activeMoves.filter((move) => {
+      if (!move.triggers || move.triggers.length === 0) return true;
+      const lowerContext = textToScan.toLowerCase();
+      return move.triggers.some((tr) => {
+        const clean = tr.trim().toLowerCase();
+        if (!clean) return false;
+        return lowerContext.includes(clean);
+      });
+    });
+
+    if (triggeredMoves.length > 0) {
+      const movesFormatted = triggeredMoves
+        .map((m) => `• [PROTAGONIST TECHNIQUE: ${m.name}] (Triggers: ${m.triggers.join(', ')})\n${m.description}`)
+        .join('\n\n');
+      systemSections.push(`[PROTAGONIST ACTIVE MOVESETS & TRIGGERED ABILITIES]\n${movesFormatted}`);
+      directorRules.push('Protagonist Movesets Injected');
+    }
+  }
+
   // Tier 3: Pinned Memories / Breakthroughs
   if (session.pinnedMemories && session.pinnedMemories.length > 0) {
     const pinnedText = session.pinnedMemories.map((m, idx) => `${idx + 1}. ${m}`).join('\n');

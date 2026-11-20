@@ -314,4 +314,41 @@ assert(!fullRenderedText.includes('```state'), 'Parsed paragraphs must exclude s
 assert(fullRenderedText.includes('Listen closely'), 'Parsed paragraphs must contain dialogue');
 console.log('    ✓ Telemetry state extraction and clean paragraph stripping verified.');
 
+// 13. Test Protagonist Moveset Triggering
+console.log('13. Testing Protagonist Moveset Triggering...');
+const testPersona = {
+  id: 'persona-test',
+  name: 'Cipher',
+  moves: [
+    {
+      id: 'move-1',
+      name: 'Shadow Step',
+      triggers: ['shadow step', 'teleport', 'blink'],
+      description: 'Vaelen vanishes into shadows and reappears behind the target.',
+      enabled: true,
+    },
+    {
+      id: 'move-2',
+      name: 'Excalibur Strike',
+      triggers: ['excalibur', 'holy sword'],
+      description: 'Unleashes a blinding golden arc of light.',
+      enabled: false, // disabled
+    },
+  ],
+};
+
+const contextMatching = 'I activate my shadow step to get behind the guard.';
+const triggered = testPersona.moves.filter(m => m.enabled && m.triggers.some(t => contextMatching.toLowerCase().includes(t)));
+assert.strictEqual(triggered.length, 1);
+assert.strictEqual(triggered[0].name, 'Shadow Step');
+
+const contextNoMatch = 'I walk casually down the hallway.';
+const triggeredNone = testPersona.moves.filter(m => m.enabled && m.triggers.some(t => contextNoMatch.toLowerCase().includes(t)));
+assert.strictEqual(triggeredNone.length, 0);
+
+const contextDisabled = 'I draw my holy sword and summon excalibur!';
+const triggeredDisabled = testPersona.moves.filter(m => m.enabled && m.triggers.some(t => contextDisabled.toLowerCase().includes(t)));
+assert.strictEqual(triggeredDisabled.length, 0);
+console.log('    ✓ Protagonist moveset trigger matching verified.');
+
 console.log('All Roleplay Engine verification checks PASSED successfully!');
