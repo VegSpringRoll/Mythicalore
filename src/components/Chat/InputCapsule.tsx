@@ -115,7 +115,7 @@ export const InputCapsule: React.FC<InputCapsuleProps> = ({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type your protagonist's action or dialogue... (Ctrl+Enter to send)"
+          placeholder="Type your protagonist's action or dialogue..."
           rows={1}
           className="flex-1 max-h-40 min-h-[38px] py-1.5 px-2 bg-transparent border-none text-white text-sm placeholder-zinc-500 focus:outline-none resize-none leading-relaxed font-sans"
         />
@@ -136,7 +136,7 @@ export const InputCapsule: React.FC<InputCapsuleProps> = ({
             onClick={onSend}
             disabled={!value.trim()}
             className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-white text-black hover:bg-zinc-200 flex items-center justify-center shrink-0 transition-all shadow-[0_0_20px_rgba(255,255,255,0.25)] disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none hover:scale-105 active:scale-95 font-bold"
-            title="Send Message (Ctrl+Enter)"
+            title="Send Message"
           >
             <Send className="w-4 h-4 text-black fill-black" />
           </button>

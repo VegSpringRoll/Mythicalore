@@ -55,13 +55,16 @@ export async function handleUpdateWorldState(req, res) {
     const { currentWeatherState, recentTurns, characterName, personaName } = body;
 
     const systemPrompt = `You are an automated game master and world state tracker for a narrative roleplay simulation.
-Analyze the latest roleplay dialogue turns and determine if the in-game Time, Location, Atmosphere/Weather, or Stakes have shifted.
+Analyze the latest roleplay dialogue turns and determine if the in-game Time, Date, Location, Atmosphere, Weather, Active NPCs, or Mood have shifted.
 
 Current World State:
 - Time: ${currentWeatherState?.time || 'Unknown'}
 - Date: ${currentWeatherState?.date || 'Unknown'}
 - Location: ${currentWeatherState?.location || 'Unknown'}
 - Atmosphere: ${currentWeatherState?.atmosphere || 'Unknown'}
+- Weather: ${currentWeatherState?.weather || 'Clear Night'}
+- Active NPCs: ${JSON.stringify(currentWeatherState?.activeNpcs || [characterName])}
+- Mood: ${currentWeatherState?.mood || 'Mysterious'}
 - Stakes/Notes: ${currentWeatherState?.notes || 'None'}
 
 Return ONLY a valid JSON object in this exact format (no markdown, no backticks):
@@ -69,7 +72,10 @@ Return ONLY a valid JSON object in this exact format (no markdown, no backticks)
   "time": "<Updated in-game time, e.g. '1:30 AM (Night)' or unchanged>",
   "date": "<Updated in-game date/era or unchanged>",
   "location": "<Exact current location/room of the characters>",
-  "atmosphere": "<Updated sensory details, lighting, weather, sounds>",
+  "atmosphere": "<Updated sensory details, lighting, sounds>",
+  "weather": "<Rain | Thunderstorm | Fog | Embers | Clear Night | Clear Day | Snow>",
+  "activeNpcs": ["<names of active NPCs in the scene>"],
+  "mood": "<Tense Combat | Romantic Night | Mysterious | Tavern | Melancholy | Peaceful>",
   "notes": "<Immediate tension, stakes, or active goal>"
 }`;
 

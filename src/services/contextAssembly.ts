@@ -104,6 +104,20 @@ ${chaptersText}`);
     systemSections.push(`[EXAMPLE DIALOGUE STYLE]\n${resolvedCard.mes_example.trim()}`);
   }
 
+  // Director Rule for Scene Telemetry & Atmosphere State
+  systemSections.push(`[DIRECTOR TELEMETRY: SCENE ATMOSPHERE & STATE]
+At the very end of your response, after all prose and dialogue, output a scene telemetry state block representing the updated scene situation:
+\`\`\`state
+{
+  "time": "${session.worldState?.time || 'Midnight (23:45)'}",
+  "date": "${session.worldState?.date || 'Day 14, Lunar Eclipse'}",
+  "weather": "${session.worldState?.weather || 'Clear Night'}",
+  "location": "${session.worldState?.location || 'Sanctum'}",
+  "activeNpcs": ${JSON.stringify(session.worldState?.activeNpcs || [character.name])},
+  "mood": "${session.worldState?.mood || 'Mysterious'}"
+}
+\`\`\``);
+
   // Final Assembled System Prompt
   const finalSystemPrompt = systemSections.join('\n\n');
 

@@ -164,6 +164,14 @@ export async function getAppSettings(): Promise<AppSettingsRecord> {
         chapterTurnInterval: current.contextWindow?.chapterTurnInterval || 10,
         slidingWindowTurns: current.contextWindow?.slidingWindowTurns || 10,
       },
+      soundscape: {
+        ...SEED_SETTINGS.soundscape,
+        ...(current.soundscape || {}),
+      },
+      ambientWeather: {
+        ...SEED_SETTINGS.ambientWeather,
+        ...(current.ambientWeather || {}),
+      },
     };
     return merged;
   }

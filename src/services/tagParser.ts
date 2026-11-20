@@ -15,6 +15,71 @@ export interface ParsedBlock {
   text: string;
 }
 
+export interface ExtractedRoleplayState {
+  time?: string;
+  date?: string;
+  location?: string;
+  atmosphere?: string;
+  weather?: string;
+  activeNpcs?: string[];
+  mood?: string;
+  notes?: string;
+}
+
+/**
+ * Extracts and removes hidden state blocks returned by the AI:
+ * e.g. ```state { "time": "...", "weather": "Rain", "mood": "Tense Combat" } ```
+ * or <!--STATE: { ... } -->
+ */
+export function extractRoleplayState(rawText: string): { cleanedText: string; state: ExtractedRoleplayState | null } {
+  if (!rawText) return { cleanedText: '', state: null };
+
+  let state: ExtractedRoleplayState | null = null;
+  let cleaned = rawText;
+
+  // 1. Look for ```state ... ``` or ```json:state ... ```
+  const codeBlockRegex = /```(?:state|json:state)\s*([\s\S]*?)```/i;
+  const codeMatch = cleaned.match(codeBlockRegex);
+  if (codeMatch) {
+    try {
+      state = JSON.parse(codeMatch[1].trim());
+    } catch {
+      // Try relaxed JSON parsing if keys aren't quoted
+      try {
+        const relaxed = codeMatch[1].replace(/(\w+):/g, '"$1":');
+        state = JSON.parse(relaxed);
+      } catch {}
+    }
+    cleaned = cleaned.replace(codeBlockRegex, '').trim();
+  }
+
+  // 2. Look for <!--STATE: ... -->
+  if (!state) {
+    const commentRegex = /<!--(?:STATE|SCENE_STATE):?\s*([\s\S]*?)-->/i;
+    const commentMatch = cleaned.match(commentRegex);
+    if (commentMatch) {
+      try {
+        state = JSON.parse(commentMatch[1].trim());
+      } catch {}
+      cleaned = cleaned.replace(commentRegex, '').trim();
+    }
+  }
+
+  // 3. Look for <state>...</state> or <state_update>...</state_update>
+  if (!state) {
+    const tagRegex = /<(?:state_update|state)>([\s\S]*?)<\/(?:state_update|state)>/i;
+    const tagMatch = cleaned.match(tagRegex);
+    if (tagMatch) {
+      try {
+        state = JSON.parse(tagMatch[1].trim());
+      } catch {}
+      cleaned = cleaned.replace(tagRegex, '').trim();
+    }
+  }
+
+  return { cleanedText: cleaned, state };
+}
+
 /**
  * Cleans any boundary asterisks (*) that hug dialogue quotation marks.
  * e.g. *"Hello"* -> "Hello", *“Hello”* -> “Hello”
@@ -37,8 +102,11 @@ export function sanitizeDialogueAsterisks(text: string): string {
 export function parseRoleplayParagraphs(rawText: string): ParagraphBlock[] {
   if (!rawText) return [];
 
+  // Strip hidden state block so technical JSON never leaks into reading cards
+  const { cleanedText: textWithoutState } = extractRoleplayState(rawText);
+
   // Pre-clean any boundary asterisks around dialogues
-  const cleanedText = sanitizeDialogueAsterisks(rawText);
+  const cleanedText = sanitizeDialogueAsterisks(textWithoutState);
   const rawParagraphs = cleanedText.split(/\r?\n+/);
   const result: ParagraphBlock[] = [];
 

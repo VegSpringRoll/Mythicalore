@@ -52,6 +52,14 @@ export const SEED_SETTINGS: AppSettingsRecord = {
     bubbleNarrationStyle: 'distinct',
     streamSpeed: 'fast',
   },
+  soundscape: {
+    enabled: false,
+    volume: 0.4,
+    autoSyncAtmosphere: true,
+  },
+  ambientWeather: {
+    enabled: true,
+  },
   updatedAt: Date.now(),
 };
 

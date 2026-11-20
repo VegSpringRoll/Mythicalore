@@ -56,7 +56,8 @@ export default async function handler(req, res) {
     req.body = await parseBody(req);
   }
 
-  const rawUrl = req.url || '';
+  const headers = req.headers || {};
+  const rawUrl = headers['x-matched-path'] || headers['x-forwarded-uri'] || req.url || '';
   const urlPath = rawUrl.split('?')[0];
 
   // Route matching
@@ -75,7 +76,7 @@ export default async function handler(req, res) {
   if (urlPath.includes('world-state')) {
     return handleUpdateWorldState(req, res);
   }
-  if (urlPath.includes('health') || urlPath === '/' || urlPath === '/api' || urlPath.includes('index')) {
+  if (urlPath.endsWith('/health') || urlPath === '/' || urlPath === '/api' || urlPath === '/api/' || urlPath === '/api/health') {
     return res.status(200).json({
       status: 'ok',
       service: 'Mythicalore Roleplay Proxy (JavaScript ESM)',

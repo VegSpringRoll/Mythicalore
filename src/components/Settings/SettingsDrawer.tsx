@@ -11,7 +11,9 @@ import {
   Brain, 
   Cpu, 
   Sparkles,
-  Zap
+  Zap,
+  CloudRain,
+  Music
 } from 'lucide-react';
 
 interface SettingsDrawerProps {
@@ -28,7 +30,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   onClose,
 }) => {
   const [current, setCurrent] = useState<AppSettingsRecord>(settings);
-  const [activeTab, setActiveTab] = useState<'roleplay' | 'universal' | 'summarizer' | 'samplers'>('roleplay');
+  const [activeTab, setActiveTab] = useState<'roleplay' | 'summarizer' | 'atmosphere' | 'universal' | 'samplers'>('roleplay');
   const [isSaving, setIsSaving] = useState(false);
 
   // Sync state whenever settings or drawer open state changes
@@ -104,18 +106,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('universal')}
-            className={`py-3 border-b-2 flex items-center gap-1.5 whitespace-nowrap transition-colors ${
-              activeTab === 'universal'
-                ? 'border-white text-white font-semibold'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
-            <span>Universal Prompt & Cache</span>
-          </button>
-
-          <button
             onClick={() => setActiveTab('summarizer')}
             className={`py-3 border-b-2 flex items-center gap-1.5 whitespace-nowrap transition-colors ${
               activeTab === 'summarizer'
@@ -125,6 +115,30 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           >
             <Brain className="w-3.5 h-3.5 text-zinc-300" />
             <span>Summary Model</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('atmosphere')}
+            className={`py-3 border-b-2 flex items-center gap-1.5 whitespace-nowrap transition-colors ${
+              activeTab === 'atmosphere'
+                ? 'border-white text-white font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <CloudRain className="w-3.5 h-3.5 text-zinc-300" />
+            <span>Atmosphere & BGM</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('universal')}
+            className={`py-3 border-b-2 flex items-center gap-1.5 whitespace-nowrap transition-colors ${
+              activeTab === 'universal'
+                ? 'border-white text-white font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
+            <span>Universal Prompt & Cache</span>
           </button>
 
           <button
@@ -216,6 +230,88 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               settings={current}
               onUpdateSettings={handleUpdate}
             />
+          )}
+
+          {/* TAB: ATMOSPHERE & SOUNDSCAPE BGM */}
+          {activeTab === 'atmosphere' && (
+            <div className="space-y-6">
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h5 className="text-sm font-bold text-white flex items-center gap-2">
+                      <CloudRain className="w-4 h-4 text-white" />
+                      <span>Monochromatic Ambient Weather</span>
+                    </h5>
+                    <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                      A single low-resolution 60fps canvas overlay paired with pure CSS vignettes (Rain, Embers, Fog, Stardust). Optimized for OLED dark mode, 1x resolution, and minimal battery usage.
+                    </p>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={current.ambientWeather?.enabled ?? true}
+                      onChange={async (e) => {
+                        const updated = {
+                          ...current,
+                          ambientWeather: {
+                            ...current.ambientWeather,
+                            enabled: e.target.checked,
+                          },
+                        };
+                        setCurrent(updated);
+                        await saveAppSettings(updated);
+                        onUpdateSettings(updated);
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h5 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Music className="w-4 h-4 text-white" />
+                      <span>Adaptive Soundscape BGM</span>
+                    </h5>
+                    <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                      Streams ambient background music and soundscapes dynamically via <strong>freetouse.com/music</strong> API matching the active scene's atmosphere and mood.
+                    </p>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={current.soundscape?.autoSyncAtmosphere ?? true}
+                      onChange={async (e) => {
+                        const updated = {
+                          ...current,
+                          soundscape: {
+                            ...current.soundscape,
+                            autoSyncAtmosphere: e.target.checked,
+                          },
+                        };
+                        setCurrent(updated);
+                        await saveAppSettings(updated);
+                        onUpdateSettings(updated);
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                  </label>
+                </div>
+
+                <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between text-xs text-zinc-300">
+                  <span>Auto-Sync with Roleplay Atmosphere</span>
+                  <span className="font-mono text-zinc-400">
+                    {current.soundscape?.autoSyncAtmosphere !== false ? 'Active' : 'Manual'}
+                  </span>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* TAB 4: SAMPLERS */}

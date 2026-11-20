@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { ChatSessionRecord, ChapterRecord, ChatMessageRecord } from '../../types/chat';
-import { CharacterRecord } from '../../types/characterCard';
-import { PersonaRecord } from '../../types/persona';
 import { AppSettingsRecord } from '../../types/settings';
 import { db } from '../../db';
-import { generateChapterSummary } from '../../services/summarizerWorker';
 import { 
   X, 
   ScrollText, 
@@ -15,18 +12,15 @@ import {
   BookOpen,
   Trash2,
   Sliders,
-  AlertCircle,
-  Brain,
-  RefreshCw
+  AlertCircle
 } from 'lucide-react';
 
 interface WorldStateSidePanelProps {
   isOpen: boolean;
   session: ChatSessionRecord;
-  character?: CharacterRecord;
-  persona?: PersonaRecord;
   allMessages: ChatMessageRecord[];
   settings: AppSettingsRecord;
+  summaryError?: string | null;
   onUpdateSession: (updated: ChatSessionRecord) => void;
   onClose: () => void;
 }
@@ -34,10 +28,9 @@ interface WorldStateSidePanelProps {
 export const WorldStateSidePanel: React.FC<WorldStateSidePanelProps> = ({
   isOpen,
   session,
-  character,
-  persona,
   allMessages,
   settings,
+  summaryError,
   onUpdateSession,
   onClose,
 }) => {
@@ -55,9 +48,7 @@ export const WorldStateSidePanel: React.FC<WorldStateSidePanelProps> = ({
   const [editingChapterNum, setEditingChapterNum] = useState<number | null>(null);
   const [editedChapterText, setEditedChapterText] = useState('');
 
-  // Manual generation state
-  const [isManualSummarizing, setIsManualSummarizing] = useState(false);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
+
 
   if (!isOpen) return null;
 
@@ -66,10 +57,13 @@ export const WorldStateSidePanel: React.FC<WorldStateSidePanelProps> = ({
     (p) => p.id === settings.summarizerModel?.profileId
   ) || (settings.summarizerProfiles?.length > 0 ? settings.summarizerProfiles[0] : null);
 
+  const summarizerKey = activeSummarizerProfile?.apiKey?.trim() || 
+    (activeSummarizerProfile ? settings.providers[activeSummarizerProfile.provider]?.apiKey?.trim() : '');
+
   const isSummarizerConnected = Boolean(
     activeSummarizerProfile &&
     activeSummarizerProfile.model &&
-    (activeSummarizerProfile.provider === 'custom' || activeSummarizerProfile.apiKey?.trim())
+    (activeSummarizerProfile.provider === 'custom' || summarizerKey)
   );
 
   const handleUpdateInterval = async (newVal: number) => {
@@ -128,49 +122,6 @@ export const WorldStateSidePanel: React.FC<WorldStateSidePanelProps> = ({
     onUpdateSession(updatedSession);
   };
 
-  const handleManualSummarize = async () => {
-    if (isManualSummarizing) return;
-    setIsManualSummarizing(true);
-    setSummaryError(null);
-    try {
-      const charToUse = character || ({
-        id: session.characterId,
-        name: 'Character',
-        data: { name: 'Character', first_mes: '', description: '' },
-      } as any);
-      const personaToUse = persona || ({
-        id: session.personaId,
-        name: 'User',
-      } as any);
-
-      const newChapter = await generateChapterSummary({
-        session,
-        character: charToUse,
-        persona: personaToUse,
-        allMessages,
-        settings,
-        force: false,
-      });
-
-      if (newChapter) {
-        const updatedChapters = [...(session.chapters || []), newChapter];
-        const updatedRolling = updatedChapters
-          .map((c) => `[CHAPTER ${c.chapterNumber}: ${c.title} (Turns ${c.startTurn}–${c.endTurn})]\n${c.summary}`)
-          .join('\n\n');
-        const updated: ChatSessionRecord = {
-          ...session,
-          chapters: updatedChapters,
-          rollingSummary: updatedRolling,
-          updatedAt: Date.now(),
-        };
-        onUpdateSession(updated);
-      }
-    } catch (err: any) {
-      setSummaryError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsManualSummarizing(false);
-    }
-  };
 
   // Turn tracking calculations
   const userTurnsCount = allMessages.filter((m) => m.role === 'user').length;
@@ -279,26 +230,6 @@ export const WorldStateSidePanel: React.FC<WorldStateSidePanelProps> = ({
               </div>
             )}
 
-            {turnsInCurrentChapter >= chapterInterval && (
-              <button
-                type="button"
-                onClick={handleManualSummarize}
-                disabled={isManualSummarizing || !isSummarizerConnected}
-                className="w-full mt-2 py-2 px-3 rounded-xl bg-white hover:bg-zinc-200 text-black font-semibold text-xs flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.2)] transition-all disabled:opacity-50"
-              >
-                {isManualSummarizing ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Synthesizing Chapter {chaptersCount + 1}...</span>
-                  </>
-                ) : (
-                  <>
-                    <Brain className="w-3.5 h-3.5" />
-                    <span>Synthesize Chapter {chaptersCount + 1} Now ({turnsInCurrentChapter}/{chapterInterval} turns)</span>
-                  </>
-                )}
-              </button>
-            )}
 
             {summaryError && (
               <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/25 flex items-start gap-2.5 text-xs text-red-300">

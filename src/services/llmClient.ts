@@ -509,6 +509,8 @@ export async function requestBackgroundSummary(params: {
 }): Promise<string> {
   const { provider, model, existingSummary, turnsToSummarize, characterName, personaName, apiKey, baseUrl } = params;
 
+  let proxyError = '';
+
   // 1. Try Proxy first
   try {
     const res = await fetch('/api/summarize', {
@@ -528,10 +530,12 @@ export async function requestBackgroundSummary(params: {
     } else {
       const errJson = await res.json().catch(() => null);
       if (errJson?.error) {
+        proxyError = errJson.error;
         console.warn('[requestBackgroundSummary] Proxy returned error:', errJson.error);
       }
     }
   } catch (err: any) {
+    proxyError = err?.message || 'Proxy unreachable';
     console.warn('[requestBackgroundSummary] Proxy offline or error, falling back to direct browser fetch.', err);
   }
 
@@ -593,6 +597,7 @@ SUMMARY: <Cohesive, literature-grade third-person narrative chronicle of these t
     headers: {
       'Content-Type': 'application/json',
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      ...(provider === 'openrouter' ? { 'HTTP-Referer': 'https://aetheria.roleplay', 'X-Title': 'Aetheria Roleplay Engine' } : {}),
     },
     body: JSON.stringify({
       model,
@@ -607,7 +612,8 @@ SUMMARY: <Cohesive, literature-grade third-person narrative chronicle of these t
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`${provider} HTTP ${res.status}: ${err.slice(0, 200)}`);
+    const directErr = `${provider} HTTP ${res.status}: ${err.slice(0, 200)}`;
+    throw new Error(proxyError ? `Proxy: ${proxyError} | Direct: ${directErr}` : directErr);
   }
 
   const data = await res.json();

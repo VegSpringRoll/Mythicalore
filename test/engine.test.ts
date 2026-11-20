@@ -284,4 +284,34 @@ assert(compiledText.includes('[CHAPTER 2: The Descent (Turns 11–20)]'));
 assert(compiledText.includes('[CHAPTER 3: The Breach (Turns 21–30)]'));
 console.log('    ✓ Chapter slicing and compilation verified.');
 
+// 12. Test AI Roleplay Telemetry Extraction & State Parsing
+console.log('12. Testing AI Roleplay Telemetry State Extraction...');
+const { extractRoleplayState } = await import('../src/services/tagParser.js');
+
+const sampleResponse = `*The rain lashes against the high arched sanctuary windows.* "Listen closely," Kora whispers, unsheathing her blade. "They are already inside."
+
+\`\`\`state
+{
+  "time": "Midnight (01:25)",
+  "date": "Day 14, Lunar Eclipse",
+  "weather": "Rain",
+  "location": "Reliquary Crypts",
+  "activeNpcs": ["Kora Vance", "Inquisitor Malakor"],
+  "mood": "Tense Combat"
+}
+\`\`\``;
+
+const { cleanedText, state } = extractRoleplayState(sampleResponse);
+assert.strictEqual(state?.time, 'Midnight (01:25)');
+assert.strictEqual(state?.weather, 'Rain');
+assert.strictEqual(state?.mood, 'Tense Combat');
+assert.deepStrictEqual(state?.activeNpcs, ['Kora Vance', 'Inquisitor Malakor']);
+assert(!cleanedText.includes('```state'), 'Cleaned text must not contain code block');
+
+const paragraphs = parseRoleplayParagraphs(sampleResponse);
+const fullRenderedText = paragraphs.map(p => p.tokens.map(t => t.text).join('')).join('\n');
+assert(!fullRenderedText.includes('```state'), 'Parsed paragraphs must exclude state block');
+assert(fullRenderedText.includes('Listen closely'), 'Parsed paragraphs must contain dialogue');
+console.log('    ✓ Telemetry state extraction and clean paragraph stripping verified.');
+
 console.log('All Roleplay Engine verification checks PASSED successfully!');

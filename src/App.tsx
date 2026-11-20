@@ -12,6 +12,7 @@ import { LorebookManagerModal } from './components/Lorebook/LorebookManagerModal
 import { ChatContainer } from './components/Chat/ChatContainer';
 import { ChatHistoryModal } from './components/Chat/ChatHistoryModal';
 import { ConnectionIndicator } from './components/Header/ConnectionIndicator';
+import { SoundwavePill } from './components/Header/SoundwavePill';
 import { AtmosphericBackground } from './components/UI/AtmosphericBackground';
 import { 
   User, 
@@ -42,6 +43,7 @@ export default function App() {
   const [isWorldStateOpen, setIsWorldStateOpen] = useState(false);
   const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [activeAtmosphere, setActiveAtmosphere] = useState<string>('Mysterious');
 
   // Chat key to force remount on fresh session
   const [chatSessionKey, setChatSessionKey] = useState(0);
@@ -453,6 +455,12 @@ export default function App() {
               onOpenSettings={() => setIsSettingsOpen(true)}
             />
 
+            {/* Tiny Clickable Soundwave Pill actively playing BGM based on atmosphere */}
+            <SoundwavePill
+              currentAtmosphere={activeAtmosphere}
+              autoSync={settings.soundscape?.autoSyncAtmosphere ?? true}
+            />
+
             {/* Settings Gear Icon */}
             <button
               type="button"
@@ -478,6 +486,7 @@ export default function App() {
               setIsWorldStateOpen={setIsWorldStateOpen}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenGallery={() => setIsGalleryOpen(true)}
+              onAtmosphereChange={setActiveAtmosphere}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center p-6 text-center relative overflow-hidden">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CharacterRecord } from '../../types/characterCard';
 import { PersonaRecord } from '../../types/persona';
-import { ChatSessionRecord, ChatMessageRecord } from '../../types/chat';
+import { ChatSessionRecord, ChatMessageRecord, WorldState } from '../../types/chat';
 import { AppSettingsRecord } from '../../types/settings';
 import { PromptInspectionData } from '../../types/llm';
 import { db, getAppSettings } from '../../db';
@@ -9,12 +9,27 @@ import { MessageCard } from './MessageCard';
 import { InputCapsule } from './InputCapsule';
 import { PromptInspectorModal } from '../PromptInspector/PromptInspectorModal';
 import { WorldStateSidePanel } from '../WorldState/WorldStateSidePanel';
+import { AmbientWeatherCanvas } from '../UI/AmbientWeatherCanvas';
 import { assemblePromptContext } from '../../services/contextAssembly';
 import { streamChatCompletion, requestAiWorldStateUpdate } from '../../services/llmClient';
 import { checkAndTriggerRollingSummary } from '../../services/summarizerWorker';
 import { substituteMacros } from '../../services/macroEngine';
 import { estimateTokens, estimateMessagesTokens } from '../../services/tokenEstimator';
-import { ChevronUp, ChevronDown, AlertTriangle, AlertCircle } from 'lucide-react';
+import { extractRoleplayState } from '../../services/tagParser';
+import { 
+  ChevronUp, 
+  ChevronDown, 
+  AlertTriangle, 
+  AlertCircle,
+  Sparkles,
+  Clock,
+  Calendar,
+  CloudRain,
+  Flame,
+  Users,
+  MapPin,
+  Compass
+} from 'lucide-react';
 
 interface ChatContainerProps {
   sessionId?: string | null;
@@ -25,6 +40,7 @@ interface ChatContainerProps {
   setIsWorldStateOpen: (open: boolean) => void;
   onOpenSettings: () => void;
   onOpenGallery: () => void;
+  onAtmosphereChange?: (atmosphere: string) => void;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -35,6 +51,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   isWorldStateOpen,
   setIsWorldStateOpen,
   onOpenSettings,
+  onAtmosphereChange,
 }) => {
   const [session, setSession] = useState<ChatSessionRecord | null>(null);
   const [messages, setMessages] = useState<ChatMessageRecord[]>([]);
@@ -45,9 +62,26 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [summarizerError, setSummarizerError] = useState<string | null>(null);
 
+  // Dropdown card state for subheader
+  const [isStateCardOpen, setIsStateCardOpen] = useState(false);
+  const stateCardRef = useRef<HTMLDivElement>(null);
+
   // Windowing: default to showing previous 10 messages of user
   const [visibleTurnsCount, setVisibleTurnsCount] = useState<number>(10);
   const isExpandingOlderRef = useRef(false);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (stateCardRef.current && !stateCardRef.current.contains(event.target as Node)) {
+        setIsStateCardOpen(false);
+      }
+    }
+    if (isStateCardOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isStateCardOpen]);
 
   // Inspector modal
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
@@ -138,6 +172,14 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
       }
 
       setSession(currentSession);
+
+      if (onAtmosphereChange && currentSession.worldState) {
+        onAtmosphereChange(
+          currentSession.worldState.weather ||
+          currentSession.worldState.mood ||
+          currentSession.worldState.atmosphere
+        );
+      }
 
       const msgs = await db.messages
         .where('sessionId')
@@ -276,6 +318,9 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
           activeAbortController.current = null;
 
           if (fullAccumulated.trim()) {
+            // Extract any hidden telemetry state block output by the AI model
+            const { state: extractedState } = extractRoleplayState(fullAccumulated);
+
             const assistantMsg: ChatMessageRecord = {
               id: assistantMsgId,
               sessionId: session.id,
@@ -291,6 +336,27 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
             await db.messages.put(assistantMsg);
             const finalMessages = [...historyMessages, assistantMsg];
             setMessages(finalMessages);
+
+            // If the model returned an inline state block, update session worldState immediately
+            if (extractedState && session) {
+              const updatedWorldState: WorldState = {
+                ...session.worldState,
+                time: extractedState.time || session.worldState?.time || 'Midnight (23:45)',
+                date: extractedState.date || session.worldState?.date || 'Day 14, Lunar Eclipse',
+                location: extractedState.location || session.worldState?.location || 'Sanctum',
+                atmosphere: extractedState.atmosphere || session.worldState?.atmosphere || 'Incense smoke and silence',
+                weather: extractedState.weather || session.worldState?.weather || 'Clear Night',
+                activeNpcs: extractedState.activeNpcs || session.worldState?.activeNpcs || [character.name],
+                mood: extractedState.mood || session.worldState?.mood || 'Mysterious',
+                notes: extractedState.notes || session.worldState?.notes,
+              };
+
+              await db.sessions.update(session.id, { worldState: updatedWorldState });
+              setSession((prev) => prev ? { ...prev, worldState: updatedWorldState } : null);
+              if (onAtmosphereChange) {
+                onAtmosphereChange(updatedWorldState.weather || updatedWorldState.mood || updatedWorldState.atmosphere);
+              }
+            }
 
             // Trigger chapter/rolling summary in background
             checkAndTriggerRollingSummary({
@@ -330,6 +396,9 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                   date: 'Day 14, Lunar Eclipse',
                   location: 'Reliquary Crypts',
                   atmosphere: 'Cold stone, solemn bells',
+                  weather: 'Clear Night',
+                  activeNpcs: [character.name],
+                  mood: 'Mysterious',
                   notes: 'Sanctuary seals',
                 },
                 recentTurns: recent,
@@ -338,9 +407,16 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                 apiKey: wsApiKey,
                 baseUrl: wsBaseUrl,
               }).then(async (updatedWorld) => {
-                if (updatedWorld) {
-                  await db.sessions.update(session.id, { worldState: updatedWorld });
-                  setSession((prev) => prev ? { ...prev, worldState: updatedWorld } : null);
+                if (updatedWorld && session) {
+                  const mergedWorld: WorldState = {
+                    ...session.worldState,
+                    ...updatedWorld,
+                  };
+                  await db.sessions.update(session.id, { worldState: mergedWorld });
+                  setSession((prev) => prev ? { ...prev, worldState: mergedWorld } : null);
+                  if (onAtmosphereChange) {
+                    onAtmosphereChange(mergedWorld.weather || mergedWorld.mood || mergedWorld.atmosphere);
+                  }
                 }
               }).catch((err) => {
                 console.warn('Background AI world state update skipped:', err);
@@ -524,21 +600,136 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
         <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      {/* Top Scene Context Subheader matching image */}
-      <div className="px-6 py-2.5 flex items-center justify-between text-xs shrink-0 z-10">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm sm:text-base font-bold text-white tracking-tight drop-shadow-md">
+      {/* Ambient Weather Visual Canvas (Monochromatic low-res 60fps overlay, z-index: 1) */}
+      <AmbientWeatherCanvas
+        weather={session?.worldState?.weather}
+        mood={session?.worldState?.mood}
+        enabled={settings.ambientWeather?.enabled ?? true}
+      />
+
+      {/* Minimal Subheader with User Turns & Tappable Dropdown State Pill */}
+      <div className="px-4 sm:px-8 py-2 flex items-center justify-between text-xs shrink-0 z-20 border-b border-white/[0.04]">
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+          <h2 className="text-sm font-bold text-white tracking-tight">
             {character.name}
           </h2>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-white border border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.15)]">
-            ACTIVE CHAT
+
+          <span className="text-zinc-600 font-mono text-[11px]">•</span>
+
+          {/* User Turns Counter */}
+          <span className="text-xs font-mono text-zinc-400">
+            {totalUserTurns} {totalUserTurns === 1 ? 'user turn' : 'user turns'}
           </span>
+
+          {/* Tappable Atmosphere / Telemetry Pill */}
+          <div className="relative" ref={stateCardRef}>
+            <button
+              type="button"
+              onClick={() => setIsStateCardOpen(!isStateCardOpen)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-[11px] font-mono text-zinc-200 hover:text-white transition-all active:scale-95 shadow-sm"
+              title="Click to view Time, Date, Weather, NPCs & Mood"
+            >
+              <Sparkles className="w-3 h-3 text-white" />
+              <span className="capitalize">{session?.worldState?.weather || session?.worldState?.mood || 'Scene State'}</span>
+              <ChevronDown className={`w-3 h-3 text-zinc-400 transition-transform duration-200 ${isStateCardOpen ? 'rotate-180 text-white' : ''}`} />
+            </button>
+
+            {/* Sleek Dark Card Dropdown */}
+            {isStateCardOpen && (
+              <div className="absolute left-0 mt-2 w-72 sm:w-80 rounded-2xl bg-[#0c0c0f]/95 backdrop-blur-2xl border border-white/20 p-4 shadow-[0_15px_50px_rgba(0,0,0,0.9)] z-50 animate-fadeIn space-y-3">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Compass className="w-4 h-4 text-white" />
+                    <h4 className="text-xs font-bold text-white tracking-tight">Scene Telemetry</h4>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-zinc-300">
+                    Live State
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  {/* Time */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-0.5">
+                    <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-zinc-400" />
+                      <span>Time</span>
+                    </span>
+                    <p className="text-white font-mono font-semibold truncate">
+                      {session?.worldState?.time || 'Midnight (23:45)'}
+                    </p>
+                  </div>
+
+                  {/* Date */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-0.5">
+                    <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-zinc-400" />
+                      <span>Date</span>
+                    </span>
+                    <p className="text-white font-mono font-semibold truncate">
+                      {session?.worldState?.date || 'Day 14, Eclipse'}
+                    </p>
+                  </div>
+
+                  {/* Weather */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-0.5">
+                    <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+                      <CloudRain className="w-3 h-3 text-zinc-400" />
+                      <span>Weather</span>
+                    </span>
+                    <p className="text-white font-semibold truncate">
+                      {session?.worldState?.weather || 'Clear Night'}
+                    </p>
+                  </div>
+
+                  {/* Mood */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-0.5">
+                    <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+                      <Flame className="w-3 h-3 text-zinc-400" />
+                      <span>Mood</span>
+                    </span>
+                    <p className="text-white font-semibold truncate">
+                      {session?.worldState?.mood || 'Mysterious'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Active NPCs */}
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-1">
+                  <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+                    <Users className="w-3 h-3 text-zinc-400" />
+                    <span>Active Characters / NPCs</span>
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {(session?.worldState?.activeNpcs && session.worldState.activeNpcs.length > 0
+                      ? session.worldState.activeNpcs
+                      : [character.name]
+                    ).map((npc, idx) => (
+                      <span key={idx} className="text-[10px] font-medium px-2 py-0.5 rounded-lg bg-white/10 text-white border border-white/10">
+                        {npc}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Location */}
+                {session?.worldState?.location && (
+                  <div className="p-2 rounded-xl bg-white/[0.02] border border-white/5 text-[10px] text-zinc-400 flex items-center gap-1.5">
+                    <MapPin className="w-3 h-3 text-zinc-400 shrink-0" />
+                    <span className="truncate">{session.worldState.location}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Right side: compact hidden messages indicator */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-zinc-400">
-            Window: {visibleMessages.length} messages active ({totalUserTurns} user turns)
-          </span>
+          {hiddenCount > 0 && (
+            <span className="text-[10px] font-mono text-zinc-500">
+              +{hiddenCount} earlier
+            </span>
+          )}
         </div>
       </div>
 
@@ -703,10 +894,9 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
         <WorldStateSidePanel
           isOpen={isWorldStateOpen}
           session={session}
-          character={character}
-          persona={persona}
           allMessages={messages}
           settings={settings}
+          summaryError={summarizerError}
           onUpdateSession={(updated) => setSession(updated)}
           onClose={() => setIsWorldStateOpen(false)}
         />

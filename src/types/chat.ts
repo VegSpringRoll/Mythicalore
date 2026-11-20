@@ -2,7 +2,10 @@ export interface WorldState {
   time: string; // e.g. "Midnight (23:45)"
   date: string; // e.g. "Day 14, Eclipse Phase"
   location: string; // e.g. "Sunken Sanctum - Reliquary Crypts"
-  atmosphere: string; // e.g. "Eerie Silence, Red Mist, Heavy Rain"
+  atmosphere: string; // e.g. "Cold stone, distant solemn bells, incense smoke"
+  weather?: string; // e.g. "Rain", "Thunderstorm", "Fog", "Embers", "Clear Night", "Snow"
+  activeNpcs?: string[]; // e.g. ["Kora Vance", "Inquisitor Malakor"]
+  mood?: string; // e.g. "Tense Combat", "Romantic Night", "Mysterious", "Tavern", "Peaceful"
   notes?: string;
 }
 

@@ -84,13 +84,14 @@ export async function generateChapterSummary(params: {
     const activeProfile = settings.summarizerProfiles.find((p) => p.id === settings.summarizerModel.profileId)
       || (settings.summarizerProfiles.length > 0 ? settings.summarizerProfiles[0] : null);
 
-    if (!activeProfile || !activeProfile.model || (!activeProfile.apiKey && activeProfile.provider !== 'custom')) {
+    const apiKey = activeProfile?.apiKey?.trim() || (activeProfile ? settings.providers[activeProfile.provider]?.apiKey?.trim() : undefined);
+
+    if (!activeProfile || !activeProfile.model || (!apiKey && activeProfile.provider !== 'custom')) {
       throw new Error('Please connect Summarizer Model');
     }
 
     const provider = activeProfile.provider;
     const model = activeProfile.model;
-    const apiKey = activeProfile.apiKey;
     const baseUrl = activeProfile.baseUrl || settings.summarizerModel.customUrl;
 
     const previousChaptersSummary = existingChapters

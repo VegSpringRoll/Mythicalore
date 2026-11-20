@@ -231,7 +231,10 @@ export function buildProviderRequest(config) {
   }
 
   // Google Gemini strict parameter cleanup (Google rejects unknown fields like top_k with HTTP 400)
-  if (provider === 'gemini') {
+  const isGoogleGeminiDirect = provider === 'gemini' || 
+    effectiveBaseUrl.includes('googleapis.com') || 
+    (typeof model === 'string' && model.toLowerCase().includes('gemini') && !effectiveBaseUrl.includes('openrouter.ai'));
+  if (isGoogleGeminiDirect) {
     delete body.top_k;
     delete body.min_p;
     delete body.frequency_penalty;

@@ -83,5 +83,16 @@ export interface AppSettingsRecord {
     bubbleNarrationStyle: 'italic' | 'quote' | 'distinct';
     streamSpeed: 'fast' | 'natural' | 'instant';
   };
+
+  soundscape: {
+    enabled: boolean;
+    volume: number; // 0.0 - 1.0
+    autoSyncAtmosphere: boolean;
+  };
+
+  ambientWeather: {
+    enabled: boolean;
+  };
+
   updatedAt: number;
 }
