@@ -2,11 +2,12 @@ import { db } from '../db';
 import { CharacterRecord } from '../types/characterCard';
 import { ChatMessageRecord } from '../types/chat';
 import { AppSettingsRecord } from '../types/settings';
-import { requestBackgroundSummary } from './llmClient';
+import { streamChatCompletion } from './llmClient';
 
 /**
- * Synthesizes an image prompt using the configured Summarizer Model.
- * Strictly converts any NSFW elements to SFW.
+ * Synthesizes a refined 2-sentence text-to-image prompt using the configured Summarizer Model.
+ * Reads character physical appearance & attire from the character card, plus current message context.
+ * Strictly converts any NSFW elements into SFW artistic compositions.
  */
 export async function synthesizeImagePrompt(params: {
   messageContent: string;
@@ -26,43 +27,71 @@ export async function synthesizeImagePrompt(params: {
     throw new Error('Please connect your Summarizer Model in Settings > Summary Model to generate scene illustrations.');
   }
 
-  const promptGuidance = `You are an expert cinematic art director and visual prompt engineer.
-Your mission is to read the current roleplay message and character visual description, then generate a single concise, high-detail text-to-image prompt (1-2 sentences).
+  // Extract character visual traits from description, personality, and tags
+  const charData = character.data;
+  const visualDetails = [
+    charData?.description ? `Visual Appearance & Attire: ${charData.description}` : '',
+    charData?.personality ? `Personality/Expression: ${charData.personality}` : '',
+  ].filter(Boolean).join('\n') || `Character: ${character.name}`;
+
+  const systemPrompt = `You are an expert cinematic art director and visual prompt engineer for high-end diffusion models (FLUX.1 Schnell and Stable Diffusion XL).
+Your task is to analyze the character's visual appearance and the current roleplay message, then synthesize a refined, vivid text-to-image generation prompt of EXACTLY 2 sentences.
 
 CRITICAL DIRECTIVES:
-1. Depict ${character.name}, focusing on visual appearance, attire, facial expression, atmospheric lighting, and key scene action.
-2. STRICT SAFETY RULE: If the scene contains explicit adult, sexual, or NSFW elements, you MUST transform it into an elegant, STRICTLY SFW (safe for work), artistic, and cinematic scene.
-3. Keep the prompt vivid, dense, and under 50 words.
-4. Output ONLY the raw prompt text. Do NOT include greetings, preamble, quotes, or conversational filler.`;
+1. Depict ${character.name} accurately according to their visual profile (face, eyes, hair color/style, clothing, attire, posture, distinguishing features).
+2. Detail the immediate action, emotional expression, environment, lighting (e.g. volumetric lighting, cinematic photography, dramatic shadows), and visual mood from the message.
+3. Length: Exactly 2 sentences. Dense, concrete, and visually descriptive.
+4. STRICT SFW RULE: If the scene contains explicit adult, sexual, or nude content, convert it into an elegant, tasteful, cinematic SFW artistic composition.
+5. FORMAT: Output ONLY the 2-sentence visual prompt. Never include quotes, markdown headers, prefixes like "Prompt:", or narrative commentary.`;
 
-  const charVisuals = character.data?.description || character.data?.personality || character.name;
-  const turnsInput = `CHARACTER VISUAL PROFILE:
-${charVisuals.slice(0, 500)}
+  const userPrompt = `[CHARACTER VISUAL PROFILE]
+Name: ${character.name}
+${visualDetails.slice(0, 1000)}
 
-CURRENT SCENE TEXT TO ILLUSTRATE:
-${messageContent}
+[CURRENT SCENE CONTEXT]
+${messageContent.slice(0, 1200)}
 
-Generate the concise SFW text-to-image prompt:`;
+Synthesize the 2-sentence visual image prompt:`;
 
-  const rawPrompt = await requestBackgroundSummary({
-    provider: activeProfile.provider,
-    model: activeProfile.model,
-    existingSummary: '',
-    turnsToSummarize: `${promptGuidance}\n\n${turnsInput}`,
-    characterName: character.name,
-    personaName: 'User',
-    apiKey,
-    baseUrl: activeProfile.baseUrl || settings.summarizerModel.customUrl,
+  let accumulated = '';
+  await new Promise<void>((resolve, reject) => {
+    streamChatCompletion(
+      {
+        provider: activeProfile.provider,
+        model: activeProfile.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        samplers: {
+          ...settings.samplers,
+          max_tokens: 150, // Strict limit ensures only 2 sentences, preventing narrative summary output
+          temperature: 0.6,
+        },
+        apiKey,
+        baseUrl: activeProfile.baseUrl || settings.summarizerModel.customUrl,
+      },
+      {
+        onChunk: (chunk) => {
+          accumulated += chunk;
+        },
+        onDone: () => resolve(),
+        onError: (err) => reject(new Error(err)),
+      }
+    );
   });
 
-  // Clean any prefixes or quotes
-  let cleaned = rawPrompt.replace(/^(TITLE|SUMMARY|PROMPT):\s*/i, '').trim();
-  cleaned = cleaned.replace(/^["']|["']$/g, '').trim();
-  return cleaned || `Cinematic digital painting of ${character.name}, dramatic lighting, 8k masterpiece`;
+  let cleaned = accumulated.trim();
+  // Strip any accidental markdown quotes, preambles, or prefixes
+  cleaned = cleaned.replace(/^["']|["']$/g, '');
+  cleaned = cleaned.replace(/^(Prompt|Image Prompt|Here is the prompt):\s*/i, '').trim();
+
+  return cleaned || `Cinematic digital painting of ${character.name}, detailed character portrait, dramatic atmospheric lighting, 8k resolution.`;
 }
 
 /**
  * Dispatches an image generation request to Cloudflare Workers AI.
+ * Supports active saved profiles or top-level imageApi credentials.
  */
 export async function generateCloudflareImage(params: {
   prompt: string;
@@ -71,9 +100,13 @@ export async function generateCloudflareImage(params: {
   const { prompt, settings } = params;
   const imgConfig = settings.imageApi;
 
-  const accountId = imgConfig?.accountId?.trim();
-  const apiToken = imgConfig?.apiToken?.trim();
-  const model = imgConfig?.model?.trim() || '@cf/black-forest-labs/flux-1-schnell';
+  // Resolve from active profile if available, otherwise fallback to top-level
+  const activeProfile = imgConfig?.profiles?.find((p) => p.id === imgConfig.activeProfileId)
+    || imgConfig?.profiles?.[0];
+
+  const accountId = activeProfile?.accountId?.trim() || imgConfig?.accountId?.trim();
+  const apiToken = activeProfile?.apiToken?.trim() || imgConfig?.apiToken?.trim();
+  const model = activeProfile?.model?.trim() || imgConfig?.model?.trim() || '@cf/black-forest-labs/flux-1-schnell';
 
   if (!accountId || !apiToken) {
     throw new Error('Cloudflare Account ID and API Token not configured. Open the left panel and click "Image API" to enter your credentials.');
@@ -147,7 +180,7 @@ export async function generateCloudflareImage(params: {
 
 /**
  * End-to-end scene illustrator:
- * 1. Generates SFW prompt via Summarizer Model.
+ * 1. Generates refined 2-sentence SFW prompt via Summarizer Model.
  * 2. Generates image via Cloudflare Workers AI.
  * 3. Saves to IndexedDB on the message record.
  */
@@ -159,14 +192,14 @@ export async function illustrateSceneForMessage(params: {
 }): Promise<{ imageUrl: string; prompt: string }> {
   const { message, character, settings, onStatusUpdate } = params;
 
-  onStatusUpdate?.('Synthesizing SFW prompt with Summarizer Model...');
+  onStatusUpdate?.('Crafting 2-sentence visual prompt with Summarizer Model...');
   const prompt = await synthesizeImagePrompt({
     messageContent: message.content,
     character,
     settings,
   });
 
-  onStatusUpdate?.(`Rendering with Cloudflare Workers AI (${prompt.slice(0, 35)}...)...`);
+  onStatusUpdate?.(`Rendering with Cloudflare (${prompt.slice(0, 40)}...)...`);
   const imageUrl = await generateCloudflareImage({
     prompt,
     settings,

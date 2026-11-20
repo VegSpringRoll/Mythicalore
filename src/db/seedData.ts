@@ -66,6 +66,18 @@ export const SEED_SETTINGS: AppSettingsRecord = {
     apiToken: '',
     model: '@cf/black-forest-labs/flux-1-schnell',
     enabled: true,
+    activeProfileId: 'default-cf',
+    profiles: [
+      {
+        id: 'default-cf',
+        name: 'Primary Cloudflare',
+        provider: 'cloudflare',
+        accountId: '',
+        apiToken: '',
+        model: '@cf/black-forest-labs/flux-1-schnell',
+        createdAt: Date.now(),
+      },
+    ],
   },
   updatedAt: Date.now(),
 };

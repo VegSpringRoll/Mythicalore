@@ -175,6 +175,17 @@ export async function getAppSettings(): Promise<AppSettingsRecord> {
       imageApi: {
         ...SEED_SETTINGS.imageApi,
         ...(current.imageApi || {}),
+        profiles: (current.imageApi?.profiles && current.imageApi.profiles.length > 0)
+          ? current.imageApi.profiles
+          : (current.imageApi?.accountId ? [{
+              id: current.imageApi.activeProfileId || 'default-cf',
+              name: 'Primary Cloudflare',
+              provider: 'cloudflare' as const,
+              accountId: current.imageApi.accountId,
+              apiToken: current.imageApi.apiToken || '',
+              model: current.imageApi.model || '@cf/black-forest-labs/flux-1-schnell',
+              createdAt: Date.now(),
+            }] : (SEED_SETTINGS.imageApi?.profiles || [])),
       } as ImageApiConfig,
     };
     return merged;

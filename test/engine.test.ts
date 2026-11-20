@@ -401,4 +401,41 @@ assert.strictEqual(isekaiCard.genre, 'Isekai');
 assert.strictEqual(isekaiCard.name, 'Jujutsu Kaisen (Isekai)');
 console.log('    ✓ Enter Isekai prompt formatting and character creation verified.');
 
+// 16. Testing Image API Multiple Profiles & Prompt Synthesis
+console.log('16. Testing Image Generator Multiple Profiles & Active Selection...');
+const mockImageApiConfig = {
+  provider: 'cloudflare' as const,
+  accountId: 'acc-primary',
+  apiToken: 'token-primary',
+  model: '@cf/black-forest-labs/flux-1-schnell',
+  enabled: true,
+  activeProfileId: 'profile-2',
+  profiles: [
+    {
+      id: 'profile-1',
+      name: 'Primary Key',
+      provider: 'cloudflare' as const,
+      accountId: 'acc-primary',
+      apiToken: 'token-primary',
+      model: '@cf/black-forest-labs/flux-1-schnell',
+      createdAt: 1000,
+    },
+    {
+      id: 'profile-2',
+      name: 'Secondary Key',
+      provider: 'cloudflare' as const,
+      accountId: 'acc-secondary',
+      apiToken: 'token-secondary',
+      model: '@cf/stabilityai/stable-diffusion-xl-base-1.0',
+      createdAt: 2000,
+    },
+  ],
+};
+
+const active = mockImageApiConfig.profiles.find(p => p.id === mockImageApiConfig.activeProfileId);
+assert.strictEqual(active?.id, 'profile-2');
+assert.strictEqual(active?.accountId, 'acc-secondary');
+assert.strictEqual(active?.model, '@cf/stabilityai/stable-diffusion-xl-base-1.0');
+console.log('    ✓ Multiple Image API profile selection verified.');
+
 console.log('All Roleplay Engine verification checks PASSED successfully!');

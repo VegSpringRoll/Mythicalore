@@ -44,12 +44,24 @@ export interface SummarizerProfile {
   createdAt: number;
 }
 
+export interface ImageApiProfile {
+  id: string;
+  name: string;
+  provider: 'cloudflare';
+  accountId: string;
+  apiToken: string;
+  model: string;
+  createdAt: number;
+}
+
 export interface ImageApiConfig {
   provider: 'cloudflare';
   accountId: string;
   apiToken: string;
   model: string;
   enabled: boolean;
+  activeProfileId?: string;
+  profiles?: ImageApiProfile[];
 }
 
 export interface AppSettingsRecord {
