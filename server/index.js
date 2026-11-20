@@ -6,6 +6,7 @@ import { handleTestConnection } from './routes/testConnection.js';
 import { handleSummarize } from './routes/summarize.js';
 import { handleFetchModels } from './routes/models.js';
 import { handleUpdateWorldState } from './routes/worldState.js';
+import { handleGenerateImage } from './routes/imageGen.js';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.post(['/api/chat/stream', '/chat/stream'], handleChatStream);
 app.post(['/api/test-connection', '/test-connection'], handleTestConnection);
 app.post(['/api/summarize', '/summarize'], handleSummarize);
 app.post(['/api/world-state/update', '/world-state/update'], handleUpdateWorldState);
+app.post(['/api/generate-image', '/generate-image'], handleGenerateImage);
 
 if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   const server = app.listen(Number(PORT), '0.0.0.0', () => {

@@ -3,6 +3,7 @@ import { handleChatStream } from '../server/routes/chatStream.js';
 import { handleTestConnection } from '../server/routes/testConnection.js';
 import { handleSummarize } from '../server/routes/summarize.js';
 import { handleUpdateWorldState } from '../server/routes/worldState.js';
+import { handleGenerateImage } from '../server/routes/imageGen.js';
 
 async function parseBody(req) {
   if (req.body && typeof req.body === 'object') return req.body;
@@ -75,6 +76,9 @@ export default async function handler(req, res) {
   }
   if (urlPath.includes('world-state')) {
     return handleUpdateWorldState(req, res);
+  }
+  if (urlPath.includes('generate-image') || urlPath.includes('image')) {
+    return handleGenerateImage(req, res);
   }
   if (urlPath.endsWith('/health') || urlPath === '/' || urlPath === '/api' || urlPath === '/api/' || urlPath === '/api/health') {
     return res.status(200).json({

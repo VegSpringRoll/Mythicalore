@@ -44,6 +44,14 @@ export interface SummarizerProfile {
   createdAt: number;
 }
 
+export interface ImageApiConfig {
+  provider: 'cloudflare';
+  accountId: string;
+  apiToken: string;
+  model: string;
+  enabled: boolean;
+}
+
 export interface AppSettingsRecord {
   id: string; // 'default'
   providers: Record<ProviderId, ProviderConfig>;
@@ -93,6 +101,8 @@ export interface AppSettingsRecord {
   ambientWeather: {
     enabled: boolean;
   };
+
+  imageApi?: ImageApiConfig;
 
   updatedAt: number;
 }

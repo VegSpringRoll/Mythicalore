@@ -60,6 +60,13 @@ export const SEED_SETTINGS: AppSettingsRecord = {
   ambientWeather: {
     enabled: true,
   },
+  imageApi: {
+    provider: 'cloudflare',
+    accountId: '',
+    apiToken: '',
+    model: '@cf/black-forest-labs/flux-1-schnell',
+    enabled: true,
+  },
   updatedAt: Date.now(),
 };
 

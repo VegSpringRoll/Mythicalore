@@ -3,7 +3,7 @@ import { CharacterRecord } from '../types/characterCard';
 import { PersonaRecord } from '../types/persona';
 import { ChatSessionRecord, ChatMessageRecord } from '../types/chat';
 import { LorebookRecord, LorebookEntryRecord } from '../types/lorebook';
-import { AppSettingsRecord } from '../types/settings';
+import { AppSettingsRecord, ImageApiConfig } from '../types/settings';
 import { 
   SEED_SETTINGS, 
   SEED_PERSONAS
@@ -172,6 +172,10 @@ export async function getAppSettings(): Promise<AppSettingsRecord> {
         ...SEED_SETTINGS.ambientWeather,
         ...(current.ambientWeather || {}),
       },
+      imageApi: {
+        ...SEED_SETTINGS.imageApi,
+        ...(current.imageApi || {}),
+      } as ImageApiConfig,
     };
     return merged;
   }

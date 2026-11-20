@@ -351,4 +351,32 @@ const triggeredDisabled = testPersona.moves.filter(m => m.enabled && m.triggers.
 assert.strictEqual(triggeredDisabled.length, 0);
 console.log('    ✓ Protagonist moveset trigger matching verified.');
 
+// 14. Testing Sliding Window Active Turns Slicing
+console.log('14. Testing Sliding Window Active Turns Slicing...');
+const testMessages: any[] = [];
+for (let i = 1; i <= 20; i++) {
+  testMessages.push({ id: `u-${i}`, role: 'user', content: `User Turn ${i}` });
+  testMessages.push({ id: `a-${i}`, role: 'assistant', content: `Assistant Reply ${i}` });
+}
+
+const maxUserTurns = 5;
+const userIndices: number[] = [];
+for (let i = 0; i < testMessages.length; i++) {
+  if (testMessages[i].role === 'user') {
+    userIndices.push(i);
+  }
+}
+
+let sliceStartIndex = 0;
+if (userIndices.length > maxUserTurns) {
+  sliceStartIndex = userIndices[userIndices.length - maxUserTurns];
+}
+
+const slidingWindowMessages = testMessages.slice(sliceStartIndex);
+assert.strictEqual(slidingWindowMessages.length, 10, 'Should have exactly 5 user + 5 assistant turns');
+assert.strictEqual(slidingWindowMessages[0].content, 'User Turn 16', 'First user turn in window must be Turn 16');
+assert.strictEqual(slidingWindowMessages[slidingWindowMessages.length - 1].content, 'Assistant Reply 20');
+assert(!slidingWindowMessages.some((m: any) => m.content.includes('Turn 15')), 'Turns before window must be excluded');
+console.log('    ✓ Sliding window strictly selects last N turns.');
+
 console.log('All Roleplay Engine verification checks PASSED successfully!');

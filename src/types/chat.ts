@@ -43,6 +43,8 @@ export interface ChatMessageRecord {
   timestamp: number;
   isPinned?: boolean;
   tokens?: number;
+  imageUrl?: string;
+  imagePrompt?: string;
   meta?: {
     model?: string;
     provider?: string;

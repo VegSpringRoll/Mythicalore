@@ -487,6 +487,7 @@ export default function App() {
               onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenGallery={() => setIsGalleryOpen(true)}
               onAtmosphereChange={setActiveAtmosphere}
+              onUpdateSettings={setSettings}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center p-6 text-center relative overflow-hidden">

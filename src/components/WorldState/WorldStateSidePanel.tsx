@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChatSessionRecord, ChapterRecord, ChatMessageRecord } from '../../types/chat';
 import { AppSettingsRecord } from '../../types/settings';
-import { db } from '../../db';
+import { db, saveAppSettings } from '../../db';
 import { 
   X, 
   ScrollText, 
@@ -12,7 +12,11 @@ import {
   BookOpen,
   Trash2,
   Sliders,
-  AlertCircle
+  AlertCircle,
+  Image as ImageIcon,
+  Eye,
+  EyeOff,
+  Check
 } from 'lucide-react';
 
 interface WorldStateSidePanelProps {
@@ -22,6 +26,7 @@ interface WorldStateSidePanelProps {
   settings: AppSettingsRecord;
   summaryError?: string | null;
   onUpdateSession: (updated: ChatSessionRecord) => void;
+  onUpdateSettings?: (settings: AppSettingsRecord) => void;
   onClose: () => void;
 }
 
@@ -32,6 +37,7 @@ export const WorldStateSidePanel: React.FC<WorldStateSidePanelProps> = ({
   settings,
   summaryError,
   onUpdateSession,
+  onUpdateSettings,
   onClose,
 }) => {
   // Chapter Turn Interval
@@ -48,7 +54,33 @@ export const WorldStateSidePanel: React.FC<WorldStateSidePanelProps> = ({
   const [editingChapterNum, setEditingChapterNum] = useState<number | null>(null);
   const [editedChapterText, setEditedChapterText] = useState('');
 
+  // Image API state (Cloudflare Workers AI)
+  const [cfAccountId, setCfAccountId] = useState(settings.imageApi?.accountId || '');
+  const [cfApiToken, setCfApiToken] = useState(settings.imageApi?.apiToken || '');
+  const [cfModel, setCfModel] = useState(settings.imageApi?.model || '@cf/black-forest-labs/flux-1-schnell');
+  const [showCfToken, setShowCfToken] = useState(false);
+  const [imageApiSaved, setImageApiSaved] = useState(false);
 
+  const handleSaveImageApi = async () => {
+    const updatedSettings: AppSettingsRecord = {
+      ...settings,
+      imageApi: {
+        provider: 'cloudflare',
+        accountId: cfAccountId.trim(),
+        apiToken: cfApiToken.trim(),
+        model: cfModel.trim(),
+        enabled: true,
+      },
+    };
+    await saveAppSettings(updatedSettings);
+    if (onUpdateSettings) {
+      onUpdateSettings(updatedSettings);
+    }
+    setImageApiSaved(true);
+    setTimeout(() => setImageApiSaved(false), 3000);
+  };
+
+  const isCfConnected = Boolean(cfAccountId.trim() && cfApiToken.trim());
 
   if (!isOpen) return null;
 
@@ -301,6 +333,118 @@ export const WorldStateSidePanel: React.FC<WorldStateSidePanelProps> = ({
                 )}
               </p>
             )}
+          </div>
+
+          {/* Section: Image API (Cloudflare Workers AI) */}
+          <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-white/10 text-white">
+                  <ImageIcon className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                    Image API
+                  </h4>
+                  <p className="text-[10px] text-zinc-400">Cloudflare Workers AI</p>
+                </div>
+              </div>
+
+              {isCfConnected ? (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="font-medium">Connected</span>
+                </div>
+              ) : (
+                <span className="text-[10px] font-mono text-zinc-500 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                  Not Configured
+                </span>
+              )}
+            </div>
+
+            <p className="text-[11px] text-zinc-400 leading-snug">
+              Generate scene illustrations directly inside AI messages. The Summarizer Model will synthesize SFW visual prompts.
+            </p>
+
+            <div className="space-y-2.5 pt-1">
+              {/* Account ID */}
+              <div>
+                <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
+                  Cloudflare Account ID
+                </label>
+                <input
+                  type="text"
+                  value={cfAccountId}
+                  onChange={(e) => setCfAccountId(e.target.value)}
+                  placeholder="e.g. 023e105f4ecef8ad9ca31a8372d0c353"
+                  className="w-full px-3 py-2 rounded-xl bg-black/60 border border-white/15 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-white/40 font-mono"
+                />
+              </div>
+
+              {/* API Token */}
+              <div>
+                <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
+                  Cloudflare API Token
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCfToken ? 'text' : 'password'}
+                    value={cfApiToken}
+                    onChange={(e) => setCfApiToken(e.target.value)}
+                    placeholder="Workers AI API Token"
+                    className="w-full pl-3 pr-9 py-2 rounded-xl bg-black/60 border border-white/15 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-white/40 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCfToken(!showCfToken)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                  >
+                    {showCfToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Model Selection */}
+              <div>
+                <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
+                  Model
+                </label>
+                <select
+                  value={cfModel}
+                  onChange={(e) => setCfModel(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-black/60 border border-white/15 text-xs text-white focus:outline-none focus:border-white/40 font-mono"
+                >
+                  <option value="@cf/black-forest-labs/flux-1-schnell">
+                    FLUX.1 Schnell (Recommended)
+                  </option>
+                  <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">
+                    SDXL Base 1.0 (Stability AI)
+                  </option>
+                  <option value="@cf/bytedance/stable-diffusion-xl-lightning">
+                    SDXL Lightning (ByteDance)
+                  </option>
+                </select>
+              </div>
+
+              {/* Save Button */}
+              <div className="pt-1 flex items-center justify-between">
+                <span className="text-[10px] text-zinc-500">
+                  {imageApiSaved ? 'Saved to Engine settings' : 'Direct browser or server proxy'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSaveImageApi}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    imageApiSaved
+                      ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(52,211,153,0.4)]'
+                      : 'bg-white text-black hover:bg-zinc-200 shadow-[0_0_15px_rgba(255,255,255,0.2)]'
+                  }`}
+                >
+                  {imageApiSaved ? <Check className="w-3.5 h-3.5 text-black" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>{imageApiSaved ? 'Saved!' : 'Save Image API'}</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Section 2: Chapter Archive */}

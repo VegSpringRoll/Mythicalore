@@ -144,23 +144,25 @@ At the very end of your response, after all prose and dialogue, output a scene t
   const finalSystemPrompt = systemSections.join('\n\n');
 
   // 4. Tier 1: Sliding Window Context Assembly
-  const maxUserTurns = settings.contextWindow.slidingWindowTurns || 10;
+  // Only the chosen amount of last N user turns + corresponding assistant replies are sent to the AI.
+  // Older turns are digested and injected exclusively via Tier 2 Story Chronicles / Summaries.
+  const maxUserTurns = (session as any)?.slidingWindowTurns || settings.contextWindow?.slidingWindowTurns || 10;
 
-  // Count user turns from the end of allMessages
-  let userTurnsSeen = 0;
-  let sliceStartIndex = 0;
-
-  for (let i = allMessages.length - 1; i >= 0; i--) {
+  // Find all indices of user messages
+  const userIndices: number[] = [];
+  for (let i = 0; i < allMessages.length; i++) {
     if (allMessages[i].role === 'user') {
-      userTurnsSeen++;
-      if (userTurnsSeen > maxUserTurns) {
-        sliceStartIndex = i + 1;
-        break;
-      }
+      userIndices.push(i);
     }
   }
 
-  // Active window messages
+  let sliceStartIndex = 0;
+  if (userIndices.length > maxUserTurns) {
+    // Start strictly at the first user turn of the last maxUserTurns window
+    sliceStartIndex = userIndices[userIndices.length - maxUserTurns];
+  }
+
+  // Active window messages containing ONLY the last N user turns
   const slidingWindowMessages = allMessages.slice(sliceStartIndex);
   const hiddenCount = sliceStartIndex;
 

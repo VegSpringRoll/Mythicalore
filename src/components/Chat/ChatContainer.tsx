@@ -42,6 +42,7 @@ interface ChatContainerProps {
   onOpenSettings: () => void;
   onOpenGallery: () => void;
   onAtmosphereChange?: (atmosphere: string) => void;
+  onUpdateSettings?: (settings: AppSettingsRecord) => void;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -53,6 +54,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   setIsWorldStateOpen,
   onOpenSettings,
   onAtmosphereChange,
+  onUpdateSettings,
 }) => {
   const [session, setSession] = useState<ChatSessionRecord | null>(null);
   const [messages, setMessages] = useState<ChatMessageRecord[]>([]);
@@ -802,11 +804,15 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
             message={msg}
             character={character}
             persona={persona}
+            settings={settings}
             isStreaming={isStreaming && streamingMessageId === msg.id}
             onRerollMessage={handleRerollMessage}
             onEditMessage={handleEditMessage}
             onPinMessage={handlePinMessage}
             onDeleteMessage={handleDeleteMessage}
+            onUpdateMessage={(updated) =>
+              setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
+            }
           />
         ))}
 
@@ -915,6 +921,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
           settings={settings}
           summaryError={summarizerError}
           onUpdateSession={(updated) => setSession(updated)}
+          onUpdateSettings={onUpdateSettings}
           onClose={() => setIsWorldStateOpen(false)}
         />
       )}
