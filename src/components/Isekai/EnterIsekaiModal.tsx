@@ -140,17 +140,12 @@ export const EnterIsekaiModal: React.FC<EnterIsekaiModalProps> = ({
         tags: ['Isekai', trimmedWorld, 'Anime / Verse'],
         data: {
           name: `${trimmedWorld} Universe`,
-          description: `An immersive, lore-faithful text roleplay adventure set in the world of ${trimmedWorld}.\nTimeline: ${trimmedTimeline}\nStarting premise: ${trimmedScenario}`,
-          personality: `Dynamic world simulator portraying all canonical characters, allies, threats, and environment authentic to ${trimmedWorld}.`,
+          description: `World: ${trimmedWorld}\nTimeline/Era: ${trimmedTimeline}\nStarting Premise: ${trimmedScenario}`,
+          personality: '',
           scenario: `World: ${trimmedWorld}\nTimeline/Era: ${trimmedTimeline}\nStarting Scenario: ${trimmedScenario}`,
-          first_mes: '', // AI will generate the opening reply dynamically
+          first_mes: '',
           mes_example: '',
-          system_prompt: `You are the master narrator and world simulator for the universe of "${trimmedWorld}".
-You portray all canonical characters, NPCs, factions, threats, and environmental hazards with extreme fidelity to canon lore, dialogue mannerisms, combat power systems, and world rules.
-TIMELINE / ERA: ${trimmedTimeline}
-STARTING PREMISE: ${trimmedScenario}
-The protagonist is {{user}}.
-Drive the narrative forward dynamically based on the starting scenario. Output rich sensory descriptions, accurate dialogue, and world consequences.`,
+          system_prompt: '', // No precoded system prompt; user's custom system prompt from settings is used
         },
         createdAt: Date.now(),
         updatedAt: Date.now(),

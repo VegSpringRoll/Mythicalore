@@ -50,15 +50,19 @@ export async function assemblePromptContext(params: {
     directorRules.push('Universal System Directives');
   }
 
-  // Core Character Persona & Scenario
-  systemSections.push(`You are ${resolvedCard.name}.\n\n[IDENTITY & BACKGROUND]\n${resolvedCard.description}`);
-  
-  if (resolvedCard.personality) {
-    systemSections.push(`[PERSONALITY & MANNERISMS]\n${resolvedCard.personality}`);
-  }
+  // Core Character Persona & Scenario (or Isekai World Setting)
+  if (character.genre === 'Isekai') {
+    systemSections.push(`[WORLD & SCENARIO SETTING]\n${resolvedCard.scenario || resolvedCard.description}`);
+  } else {
+    systemSections.push(`You are ${resolvedCard.name}.\n\n[IDENTITY & BACKGROUND]\n${resolvedCard.description}`);
+    
+    if (resolvedCard.personality) {
+      systemSections.push(`[PERSONALITY & MANNERISMS]\n${resolvedCard.personality}`);
+    }
 
-  if (resolvedCard.scenario) {
-    systemSections.push(`[ACTIVE SCENARIO & SETTING]\n${resolvedCard.scenario}`);
+    if (resolvedCard.scenario) {
+      systemSections.push(`[ACTIVE SCENARIO & SETTING]\n${resolvedCard.scenario}`);
+    }
   }
 
   // Protagonist Information
@@ -115,8 +119,8 @@ ${chaptersText}`);
     systemSections.push(`[LOREBOOK ENTRIES]\n${loreResult.injectedLoreText}`);
   }
 
-  // Character-specific System Prompt & Director Rules
-  if (resolvedCard.system_prompt) {
+  // Character-specific System Prompt & Director Rules (suppressed for Isekai anime worlds)
+  if (resolvedCard.system_prompt && character.genre !== 'Isekai') {
     systemSections.push(`[CHARACTER INSTRUCTIONS]\n${resolvedCard.system_prompt}`);
     directorRules.push(resolvedCard.system_prompt);
   }
